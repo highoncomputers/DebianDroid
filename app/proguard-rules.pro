@@ -1,3 +1,7 @@
 -keep class com.debiandroid.desktop.** { *; }
 -keep class * implements java.io.Serializable { *; }
 -dontwarn javax.annotation.**
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.conscrypt.**
+-dontwarn org.openjsse.**
