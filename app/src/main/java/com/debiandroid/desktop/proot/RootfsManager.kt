@@ -113,7 +113,7 @@ class RootfsManager(private val context: Context) {
             BufferedInputStream(fis).use { bis ->
                 GZIPInputStream(bis).use { gzis ->
                     val tarInput = TarInputStream(gzis)
-                    var entry = tarInput.nextEntry
+                    var entry = tarInput.nextEntry()
                     while (entry != null) {
                         val outputFile = File(rootfsDir, entry.name)
                         if (entry.isDirectory) {
@@ -126,7 +126,7 @@ class RootfsManager(private val context: Context) {
                             outputFile.setExecutable(entry.isExecutable, false)
                         }
                         extractedBytes += entry.size
-                        tarInput.nextEntry.also { entry = it }
+                        entry = tarInput.nextEntry()
                         val progress = if (totalBytes > 0) extractedBytes.toFloat() / totalBytes else 0f
                         _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = progress)
                     }

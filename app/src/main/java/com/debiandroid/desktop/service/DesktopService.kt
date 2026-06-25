@@ -51,9 +51,11 @@ class DesktopService : Service() {
     }
 
     private fun restart() {
-        prootRunner.stop()
-        delay(500)
-        start()
+        scope.launch {
+            prootRunner.stop()
+            delay(500)
+            start()
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

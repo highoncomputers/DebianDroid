@@ -69,7 +69,7 @@ class TerminalSession {
                 _state.value = _state.value.copy(lines = current.takeLast(500))
             }
             '\r' -> {}
-            '\b', 0x7F -> {
+            '\b', '\u007f' -> {
                 if (currentLine.isNotEmpty()) {
                     currentLine.deleteCharAt(currentLine.length - 1)
                 }

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Issue
+    url: https://github.com/highoncomputers/DebianDroid/security/policy
+    about: Please report security vulnerabilities privately via the security policy
+  - name: Discussion
+    url: https://github.com/highoncomputers/DebianDroid/discussions
+    about: Questions, ideas, and general discussion
