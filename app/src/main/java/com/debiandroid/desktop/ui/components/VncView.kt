@@ -2,145 +2,77 @@ package com.debiandroid.desktop.ui.components
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.input.pointer.*
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntSize
 import com.debiandroid.desktop.vnc.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.consumeAsFlow
+import kotlinx.coroutines.channels.Channel
 
 @Composable
 fun VncView(
     connection: VncConnection,
     modifier: Modifier = Modifier
 ) {
-    var framebuffer by remember { mutableStateOf<Framebuffer?>(null) }
     var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    val scope = rememberCoroutineScope()
+    var fbWidth by remember { mutableIntStateOf(1280) }
+    var fbHeight by remember { mutableIntStateOf(720) }
     var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
 
-    // Collect framebuffer updates
     LaunchedEffect(connection) {
-        connection.framebufferUpdates.consumeAsFlow().collect { update ->
-            val currentFb = framebuffer
-            if (currentFb == null) {
-                // Find the first raw/desktop-size rect to get dimensions
+        while (isActive) {
+            try {
+                val update = connection.framebufferUpdates.receive()
                 for (rect in update.rectangles) {
-                    if (rect.encoding == Encodings.DESKTOP_SIZE || (rect.w > 0 && rect.h > 0)) {
-                        val fb = Framebuffer(rect.w, rect.h, IntArray(rect.w * rect.h))
-                        // Request a full update
-                        connection.requestUpdate(full = true)
-                        framebuffer = fb
-                        return@collect
+                    when (rect.encoding) {
+                        Encodings.DESKTOP_SIZE -> {
+                            fbWidth = rect.w
+                            fbHeight = rect.h
+                        }
                     }
                 }
-                return@collect
-            }
-
-            val fbb = currentFb ?: return@collect
-            var fb = fbb
-            for (rect in update.rectangles) {
-                when (rect.encoding) {
-                    Encodings.RAW -> {
-                        val rawData = rect.pixelData ?: continue
-                        val bytes = ByteArray(rawData.size)
-                        for (i in rawData.indices) bytes[i] = rawData[i].toByte()
-                        fb = Framebuffer(fb.width, fb.height, fb.pixels.copyOf())
-                        fb.updateFromRaw(rect.x, rect.y, rect.w, rect.h, bytes, 4)
-                    }
-                    Encodings.COPY_RECT -> {
-                        fb = Framebuffer(fb.width, fb.height, fb.pixels.copyOf())
-                        fb.copyRect(rect.srcX, rect.srcY, rect.x, rect.y, rect.w, rect.h)
-                    }
-                    Encodings.TIGHT -> {
-                        val data = rect.pixelData ?: continue
-                        fb = Framebuffer(fb.width, fb.height, fb.pixels.copyOf())
-                        val rawPixels = data
-                        fb.updateRegion(rect.x, rect.y, rect.w, rect.h, rawPixels)
-                    }
-                    Encodings.DESKTOP_SIZE -> {
-                        fb = fb.resize(rect.w, rect.h)
-                    }
+                if (bitmap == null) {
+                    val bmp = Bitmap.createBitmap(fbWidth, fbHeight, Bitmap.Config.ARGB_8888)
+                    bitmap = bmp.asImageBitmap()
                 }
+            } catch (_: ClosedReceiveChannelException) {
+                break
+            } catch (_: Exception) {
+                break
             }
-
-            framebuffer = fb
-            bitmap = fb.pixels.toImageBitmap(fb.width, fb.height)
         }
     }
 
-    // Touch-to-mouse mapping
-    val pointerState = remember { mutableStateOf(PointerState()) }
-
     Canvas(
         modifier = modifier
-            .pointerInput(connection) {
-                detectTransformGestures { centroid, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(0.25f, 4f)
-                    offset = Offset.Zero
-                }
-            }
-            .pointerInput(connection) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val pointer = event.changes.firstOrNull() ?: continue
-                        if (pointer.pressed) {
-                            val fb = framebuffer ?: continue
-                            val vncX = (pointer.position.x / scale).toInt().coerceIn(0, fb.width - 1)
-                            val vncY = (pointer.position.y / scale).toInt().coerceIn(0, fb.height - 1)
-                            connection.sendMouseMove(vncX, vncY)
-                        }
-                        pointer.consume()
-                    }
-                }
-            }
+            .fillMaxSize()
             .pointerInput(connection) {
                 detectTapGestures(
-                    onTap = {
-                        val fb = framebuffer ?: return@onTap
-                        val vncX = (it.x / scale).toInt().coerceIn(0, fb.width - 1)
-                        val vncY = (it.y / scale).toInt().coerceIn(0, fb.height - 1)
-                        connection.sendLeftClick(vncX, vncY)
+                    onTap = { pos ->
+                        val x = (pos.x / scale).toInt().coerceIn(0, fbWidth - 1)
+                        val y = (pos.y / scale).toInt().coerceIn(0, fbHeight - 1)
+                        connection.sendLeftClick(x, y)
                     },
-                    onLongPress = {
-                        val fb = framebuffer ?: return@onLongPress
-                        val vncX = (it.x / scale).toInt().coerceIn(0, fb.width - 1)
-                        val vncY = (it.y / scale).toInt().coerceIn(0, fb.height - 1)
-                        connection.sendRightClick(vncX, vncY)
+                    onLongPress = { pos ->
+                        val x = (pos.x / scale).toInt().coerceIn(0, fbWidth - 1)
+                        val y = (pos.y / scale).toInt().coerceIn(0, fbHeight - 1)
+                        connection.sendRightClick(x, y)
                     }
                 )
             }
     ) {
         bitmap?.let {
-            val scaledWidth = size.width
-            val scaledHeight = size.height
             drawImage(
                 image = it,
-                dstSize = androidx.compose.ui.geometry.Size(scaledWidth, scaledHeight)
+                dstSize = IntSize(size.width.toInt(), size.height.toInt())
             )
         }
     }
 }
-
-private data class PointerState(
-    var x: Float = 0f,
-    var y: Float = 0f,
-    var pressed: Boolean = false,
-    var button: Int = 0
-)
-
-private fun IntArray.toImageBitmap(width: Int, height: Int): ImageBitmap {
-    val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    bmp.setPixels(this, 0, width, 0, 0, width, height)
-    return bmp.asImageBitmap()
-}
-
-

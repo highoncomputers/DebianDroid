@@ -65,11 +65,14 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(
-                onClick = { onGetStarted() },
-                visible = pagerState.currentPage < 2
-            ) {
-                Text("Skip")
+            if (pagerState.currentPage < 2) {
+                TextButton(
+                    onClick = { onGetStarted() }
+                ) {
+                    Text("Skip")
+                }
+            } else {
+                Spacer(Modifier.width(1.dp))
             }
 
             if (pagerState.currentPage < 2) {
