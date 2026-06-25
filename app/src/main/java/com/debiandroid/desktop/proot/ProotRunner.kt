@@ -116,7 +116,12 @@ EOF
             pb.environment()["USER"] = "debian"
             pb.environment()["PULSE_SERVER"] = "127.0.0.1"
             process = pb.start()
-            _state.value = ProotState(isRunning = true, pid = process!!.pid())
+            val pid = try {
+                process!!::class.java.getMethod("pid").invoke(process) as Int
+            } catch (_: Exception) {
+                -1
+            }
+            _state.value = ProotState(isRunning = true, pid = pid)
             monitorProcess()
         } catch (e: Exception) {
             _state.value = ProotState(isRunning = false, error = e.message)

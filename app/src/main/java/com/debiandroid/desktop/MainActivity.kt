@@ -18,8 +18,8 @@ import com.debiandroid.desktop.service.DesktopService
 import com.debiandroid.desktop.service.SetupService
 import com.debiandroid.desktop.ui.screens.*
 import com.debiandroid.desktop.ui.theme.DebianDroidTheme
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity() {
     private lateinit var sessionManager: SessionManager
@@ -69,6 +69,8 @@ fun DebianDroidNavHost(
     val startDestination = if (isSetupComplete) "home" else "onboarding"
     var isDesktopRunning by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     NavHost(navController = navController, startDestination = startDestination) {
         composable("onboarding") {
             OnboardingScreen(
@@ -79,7 +81,7 @@ fun DebianDroidNavHost(
             SetupScreen(
                 rootfsManager = rootfsManager,
                 onComplete = {
-                    kotlinx.coroutines.MainScope().launch {
+                    scope.launch {
                         sessionManager.setSetupComplete(true)
                         navController.navigate("home") { popUpTo("setup") { inclusive = true } }
                     }
@@ -115,7 +117,7 @@ fun DebianDroidNavHost(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onReinstall = {
-                    kotlinx.coroutines.MainScope().launch {
+                    scope.launch {
                         sessionManager.setSetupComplete(false)
                         navController.navigate("setup") { popUpTo("home") { inclusive = true } }
                     }
