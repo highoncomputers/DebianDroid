@@ -42,7 +42,7 @@ fun VncView(
                     val bmp = Bitmap.createBitmap(fbWidth, fbHeight, Bitmap.Config.ARGB_8888)
                     bitmap = bmp.asImageBitmap()
                 }
-            } catch (_: ClosedReceiveChannelException) {
+            } catch (_: kotlinx.coroutines.channels.ClosedReceiveChannelException) {
                 break
             } catch (_: Exception) {
                 break

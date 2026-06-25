@@ -294,14 +294,14 @@ class RfbProtocol(
                         val r = decompressed[off].toInt() and 0xFF
                         val g = decompressed[off + 1].toInt() and 0xFF
                         val b = decompressed[off + 2].toInt() and 0xFF
-                        pixels[pixelOffset++] = 0xFF000000 or (r shl 16) or (g shl 8) or b
+                        pixels[pixelOffset++] = (0xFF000000).toInt() or (r shl 16) or (g shl 8) or b
                     }
                 }
                 1 -> { // Fill
                     val r = readFully(1)[0].toInt() and 0xFF
                     val g = readFully(1)[0].toInt() and 0xFF
                     val b = readFully(1)[0].toInt() and 0xFF
-                    val color = 0xFF000000 or (r shl 16) or (g shl 8) or b
+                    val color = (0xFF000000).toInt() or (r shl 16) or (g shl 8) or b
                     val remaining = pixelCount - pixelOffset
                     pixels.fill(color, pixelOffset, pixelOffset + remaining)
                     pixelOffset = pixelCount

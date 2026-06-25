@@ -48,7 +48,7 @@ data class Framebuffer(
                     val r = rawData[offset + 2].toInt() and 0xFF
                     val g = rawData[offset + 1].toInt() and 0xFF
                     val b = rawData[offset].toInt() and 0xFF
-                    data[i] = 0xFF000000 or (r shl 16) or (g shl 8) or b
+                    data[i] = (0xFF000000).toInt() or (r shl 16) or (g shl 8) or b
                 }
             }
             2 -> { // RGB565 (16-bit)
@@ -58,7 +58,7 @@ data class Framebuffer(
                     val r = (pixel shr 11) and 0x1F
                     val g = (pixel shr 5) and 0x3F
                     val b = pixel and 0x1F
-                    data[i] = 0xFF000000 or (r shl 19) or (g shl 10) or (b shl 3)
+                    data[i] = (0xFF000000).toInt() or (r shl 19) or (g shl 10) or (b shl 3)
                 }
             }
         }

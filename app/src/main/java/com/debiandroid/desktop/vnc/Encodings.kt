@@ -38,14 +38,14 @@ object Encodings {
                         val r = decompressed[off].toInt() and 0xFF
                         val g = decompressed[off + 1].toInt() and 0xFF
                         val b = decompressed[off + 2].toInt() and 0xFF
-                        pixels[pixelOffset++] = 0xFF000000 or (r shl 16) or (g shl 8) or b
+                        pixels[pixelOffset++] = (0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
                     }
                 }
                 1 -> { // Fill (solid color)
                     val r = data[dataOffset++].toInt() and 0xFF
                     val g = data[dataOffset++].toInt() and 0xFF
                     val b = data[dataOffset++].toInt() and 0xFF
-                    val color = 0xFF000000 or (r shl 16) or (g shl 8) or b
+                    val color = (0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
                     val count = minOf(width * height - pixelOffset, width * height)
                     pixels.fill(color, pixelOffset, pixelOffset + count)
                     pixelOffset += count
