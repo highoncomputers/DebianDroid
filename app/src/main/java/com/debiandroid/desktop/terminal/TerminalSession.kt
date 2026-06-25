@@ -74,7 +74,7 @@ class TerminalSession {
                     currentLine.deleteCharAt(currentLine.length - 1)
                 }
             }
-            0x1B -> { /* ANSI escape sequences - simplified */ }
+            '\u001b' -> { /* ANSI escape sequences - simplified */ }
             else -> {
                 if (c.code in 0x20..0x7E || c.code > 0xA0) {
                     currentLine.append(c)
