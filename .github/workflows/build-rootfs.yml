@@ -1,0 +1,70 @@
+name: Build Debian Rootfs
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1 * *'  # Monthly rebuild
+
+jobs:
+  build-rootfs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debootstrap qemu-user-static binfmt-support xz-utils
+
+      - name: Build Debian Trixie rootfs (ARM64)
+        run: |
+          sudo mkdir -p rootfs
+          sudo debootstrap --arch=arm64 --foreign --include=ca-certificates,openssl trixie rootfs/ http://deb.debian.org/debian
+          sudo cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
+          sudo chroot rootfs/ /debootstrap/debootstrap --second-stage
+          sudo chroot rootfs/ apt-get update
+          sudo chroot rootfs/ apt-get install -y xfce4 xfce4-goodies tigervnc-standalone-server tigervnc-xorg-extension dbus-x11 pulseaudio x11-utils wget curl nano
+          sudo chroot rootfs/ apt-get clean
+
+      - name: Configure rootfs
+        run: |
+          sudo mkdir -p rootfs/home/debian/.vnc
+          sudo mkdir -p rootfs/shared
+          echo "debian:x:1000:1000:Debian User,,,:/home/debian:/bin/bash" | sudo tee -a rootfs/etc/passwd
+          echo "debian:x:1000:" | sudo tee -a rootfs/etc/group
+          echo "nameserver 8.8.8.8" | sudo tee rootfs/etc/resolv.conf
+          echo "nameserver 1.1.1.1" | sudo tee -a rootfs/etc/resolv.conf
+          sudo chmod 644 rootfs/etc/resolv.conf
+          sudo chown -R 1000:1000 rootfs/home/debian
+
+      - name: Create tarball
+        run: |
+          cd rootfs
+          sudo tar -czf ../debian-trixie-arm64.tar.gz .
+          cd ..
+
+      - name: Generate checksum
+        run: sha256sum debian-trixie-arm64.tar.gz > debian-trixie-arm64.tar.gz.sha256
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: rootfs-${{ github.run_number }}
+          name: "Debian Trixie Rootfs v${{ github.run_number }}"
+          body: |
+            ## Debian Trixie Rootfs for ARM64
+
+            Pre-built Debian Trixie rootfs with XFCE4 desktop and TigerVNC server.
+
+            **Size:** $(du -h debian-trixie-arm64.tar.gz | cut -f1)
+
+            ### Packages included
+            - xfce4, xfce4-goodies
+            - tigervnc-standalone-server
+            - dbus-x11, pulseaudio
+            - wget, curl, nano, ca-certificates
+          files: |
+            debian-trixie-arm64.tar.gz
+            debian-trixie-arm64.tar.gz.sha256

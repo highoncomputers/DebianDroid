@@ -1,0 +1,3 @@
+-keep class com.debiandroid.desktop.** { *; }
+-keep class * implements java.io.Serializable { *; }
+-dontwarn javax.annotation.**

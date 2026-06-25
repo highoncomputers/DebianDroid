@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DebianDroid</string>
+    <string name="desktop_running">Desktop Running</string>
+    <string name="desktop_stopped">Desktop Stopped</string>
+    <string name="launch_desktop">Launch Desktop</string>
+    <string name="terminal">Terminal</string>
+    <string name="settings">Settings</string>
+    <string name="files">Files</string>
+    <string name="notification_channel_desktop">Desktop Service</string>
+    <string name="notification_channel_setup">Setup Progress</string>
+    <string name="download_debian">Downloading Debian Trixie…</string>
+    <string name="extracting_rootfs">Extracting filesystem…</string>
+    <string name="configuring_desktop">Configuring desktop…</string>
+    <string name="setup_complete">Setup complete!</string>
+    <string name="vnc_password">debian</string>
+</resources>
