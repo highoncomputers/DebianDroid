@@ -159,7 +159,7 @@ private fun VirtualKeyboardView(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color(0xFF2D2D2D),
+        color = Color(((0xFF2D2D2D).toInt()).toInt()),
         tonalElevation = 8.dp
     ) {
         Column(
@@ -213,7 +213,7 @@ private fun KeyboardKey(
     Button(
         onClick = onClick,
         modifier = modifier.height(40.dp).padding(horizontal = 2.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF555555)),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(((0xFF555555).toInt()).toInt())),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(text, color = Color.White, style = MaterialTheme.typography.labelSmall)

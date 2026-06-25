@@ -90,7 +90,7 @@ fun TerminalScreen(
             // Input area
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color(0xFF252526),
+                color = Color((0xFF252526).toInt()),
                 tonalElevation = 2.dp
             ) {
                 Row(
