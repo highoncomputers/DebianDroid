@@ -174,7 +174,7 @@ class RootfsManager(private val context: Context) {
         private var currentEntry: Entry? = null
         private var remainingBytes: Long = 0
 
-        fun nextEntry: Entry? {
+        fun nextEntry(): Entry? {
             skipPadding()
             if (readBlock(buffer) == -1) return null
             if (buffer.all { it == 0.toByte() }) return null
