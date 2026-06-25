@@ -13,6 +13,7 @@ import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalContext
 import com.debiandroid.desktop.vnc.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.consumeAsFlow
 
 @Composable
 fun VncView(
@@ -43,7 +44,8 @@ fun VncView(
                 return@collect
             }
 
-            var fb = currentFb
+            val fbb = currentFb ?: return@collect
+            var fb = fbb
             for (rect in update.rectangles) {
                 when (rect.encoding) {
                     Encodings.RAW -> {
@@ -103,13 +105,13 @@ fun VncView(
             .pointerInput(connection) {
                 detectTapGestures(
                     onTap = {
-                        val fb = framebuffer ?: return@detectTapGestures
+                        val fb = framebuffer ?: return@onTap
                         val vncX = (it.x / scale).toInt().coerceIn(0, fb.width - 1)
                         val vncY = (it.y / scale).toInt().coerceIn(0, fb.height - 1)
                         connection.sendLeftClick(vncX, vncY)
                     },
                     onLongPress = {
-                        val fb = framebuffer ?: return@detectLongPress
+                        val fb = framebuffer ?: return@onLongPress
                         val vncX = (it.x / scale).toInt().coerceIn(0, fb.width - 1)
                         val vncY = (it.y / scale).toInt().coerceIn(0, fb.height - 1)
                         connection.sendRightClick(vncX, vncY)
@@ -141,11 +143,4 @@ private fun IntArray.toImageBitmap(width: Int, height: Int): ImageBitmap {
     return bmp.asImageBitmap()
 }
 
-private fun <T> kotlinx.coroutines.channels.ReceiveChannel<T>.consumeAsFlow() = kotlinx.coroutines.flow.callbackFlow {
-    launch {
-        for (item in this@consumeAsFlow) {
-            send(item)
-            if (!isActive) break
-        }
-    }
-}
+
