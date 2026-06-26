@@ -172,7 +172,7 @@ class RootfsManager(private val context: Context) {
             if (name.isEmpty()) return null
 
             val sizeStr = String(buffer, 124, 12).trimEnd('\u0000')
-            val size = sizeStr.toLongOrNull() ?: 0L
+            val size = sizeStr.toLongOrNull(8) ?: 0L
             val type = buffer[156].toInt()
             val modeStr = String(buffer, 100, 8).trimEnd('\u0000')
             val mode = modeStr.toIntOrNull(8) ?: 0

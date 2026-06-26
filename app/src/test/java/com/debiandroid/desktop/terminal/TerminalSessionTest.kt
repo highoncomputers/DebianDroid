@@ -30,11 +30,12 @@ class TerminalSessionTest {
     }
 
     @Test
-    fun `stop clears state`() {
+    fun `stop resets to initial state`() {
         val session = TerminalSession()
         session.stop()
         val state = session.state.value
-        assertEquals(0, state.lines.size)
+        assertEquals(1, state.lines.size)
+        assertEquals("\$ ", state.lines.last().text)
         assertFalse(state.isRunning)
     }
 }

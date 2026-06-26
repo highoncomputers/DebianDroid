@@ -65,7 +65,7 @@ class TarInputStreamTest {
         val entry = tar.nextEntry()
 
         assertNotNull(entry)
-        assertEquals(11L, entry!!.size)
+        assertEquals(12L, entry!!.size) // "Hello World!" = 12 bytes
 
         val out = java.io.ByteArrayOutputStream()
         tar.readAll(out)

@@ -2,6 +2,7 @@ package com.debiandroid.desktop.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import androidx.datastore.preferences.core.*
@@ -14,16 +15,21 @@ private val Context.dataStore by preferencesDataStore(name = "session_prefs")
 
 class SessionManager(private val context: Context) {
     private val encryptedPrefs: SharedPreferences by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "encrypted_session_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                "encrypted_session_prefs",
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            Log.w("SessionManager", "Falling back to plaintext SharedPreferences", e)
+            context.getSharedPreferences("fallback_session_prefs", Context.MODE_PRIVATE)
+        }
     }
 
     private val _vncPassword = MutableStateFlow(
