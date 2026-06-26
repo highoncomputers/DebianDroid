@@ -26,7 +26,8 @@ class ProotRunner(private val context: Context) {
     private val busybox: File get() = File(filesDir, "busybox/busybox")
 
     fun startVncServer(vncPassword: String, resolution: String = "1280x720") {
-        val passFile = File(filesDir, ".vnc_pass")
+        val passFile = File(filesDir, "tmp/.vnc_pass")
+        passFile.parentFile?.mkdirs()
         passFile.writeText(vncPassword)
         passFile.setReadable(true, true)
 
@@ -55,6 +56,11 @@ EOF
             """.trimIndent()
         )
         startProcess(cmd)
+
+        scope.launch {
+            delay(5000)
+            if (passFile.exists()) passFile.delete()
+        }
     }
 
     fun startDesktop() {

@@ -6,9 +6,7 @@ import java.net.Socket
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
-import kotlin.math.min
 
 data class FramebufferUpdate(
     val rectangles: List<RectangleData>
@@ -33,6 +31,7 @@ class RfbProtocol(
         private set
     var fbHeight: Int = 0
         private set
+    private val inflater = java.util.zip.Inflater()
 
     fun getBpp(): Int = bpp
 
@@ -292,10 +291,9 @@ class RfbProtocol(
                     val decompLen = width.toLong() * height * 3
                     if (decompLen > Int.MAX_VALUE) throw VncProtocolException("Tight rect too large: ${decompLen}bytes")
                     val decompressed = ByteArray(decompLen.toInt())
-                    val inflater = java.util.zip.Inflater()
+                    inflater.reset()
                     inflater.setInput(compressed)
                     val decoded = inflater.inflate(decompressed)
-                    inflater.end()
 
                     for (i in 0 until minOf(decoded / 3, pixelCount - pixelOffset)) {
                         val off = i * 3

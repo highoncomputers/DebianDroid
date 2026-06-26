@@ -8,8 +8,6 @@ lifecycle = "2.8.5"
 navigation-compose = "2.8.0"
 datastore = "1.1.1"
 coroutines = "1.9.0"
-lottie = "6.6.2"
-security-crypto = "1.1.0-alpha07"
 junit = "4.13.2"
 mockk = "1.12.0"
 kotlinx-coroutines-test = "1.9.0"
@@ -30,8 +28,6 @@ lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-ru
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
-lottie = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test" }

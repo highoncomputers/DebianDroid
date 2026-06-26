@@ -58,6 +58,9 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
 
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
       - name: Build release APK
         run: ./gradlew assembleRelease
         env:
@@ -65,21 +68,14 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release.apk
-          path: app/build/outputs/apk/release/app-release.apk
-
-      - name: Copy APK to sdcard/apkfiles
+      - name: Copy APKs and rootfs to sdcard/apkfiles
         run: |
           mkdir -p sdcard/apkfiles
-          cp app/build/outputs/apk/release/app-release.apk sdcard/apkfiles/
+          cp app/build/outputs/apk/release/app-release.apk sdcard/apkfiles/DebianDroid-v${{ github.run_number }}.apk
+          cp app/build/outputs/apk/debug/app-debug.apk sdcard/apkfiles/DebianDroid-v${{ github.run_number }}-debug.apk
+          cp app/src/main/assets/rootfs.tar.gz sdcard/apkfiles/
 
-      - name: Copy rootfs to sdcard/apkfiles
-        run: cp app/src/main/assets/rootfs.tar.gz sdcard/apkfiles/
-
-      - name: Upload APK (sdcard path)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: apkfiles
@@ -101,11 +97,12 @@ jobs:
             - Integrated terminal
             - File manager
             - Persistent storage
+            - Rootfs tarball for offline setup
 
             ### Installation
-            1. Download the APK
+            1. Download `DebianDroid-v${{ github.run_number }}.apk`
             2. Enable "Install from unknown sources"
             3. Install and launch
-            4. Follow the one-time setup wizard to extract the Debian rootfs (no network required)
-          files: app/build/outputs/apk/release/app-release.apk
+            4. Follow the one-time setup wizard to extract the Debian rootfs
+          files: sdcard/apkfiles/DebianDroid-v${{ github.run_number }}.apk
           generate_release_notes: true

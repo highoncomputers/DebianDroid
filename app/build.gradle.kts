@@ -81,8 +81,6 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.datastore.preferences)
     implementation(libs.coroutines.android)
-    implementation(libs.lottie)
-    implementation(libs.security.crypto)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

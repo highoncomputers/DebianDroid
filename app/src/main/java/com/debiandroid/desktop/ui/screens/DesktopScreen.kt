@@ -1,6 +1,5 @@
 package com.debiandroid.desktop.ui.screens
 
-import android.view.KeyEvent
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.*
@@ -10,13 +9,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.unit.dp
@@ -24,7 +19,6 @@ import com.debiandroid.desktop.ui.components.VncView
 import com.debiandroid.desktop.vnc.VncConnection
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DesktopScreen(
     onBack: () -> Unit,
@@ -161,6 +155,9 @@ private fun VirtualKeyboardView(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var ctrlActive by remember { mutableStateOf(false) }
+    var altActive by remember { mutableStateOf(false) }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = Color(0xFF2D2D2D),
@@ -176,9 +173,16 @@ private fun VirtualKeyboardView(
             ) {
                 KeyboardKey("Esc", onClick = { onKeyPress('\u001B') })
                 KeyboardKey("Tab", onClick = { onKeyPress('\t') })
-                KeyboardKey("Ctrl", onClick = { /* modifier state */ })
-                KeyboardKey("Alt", onClick = { /* modifier state */ })
-                KeyboardKey("Del", onClick = { })
+                KeyboardKey(
+                    if (ctrlActive) "CTRL ON" else "Ctrl",
+                    onClick = { ctrlActive = !ctrlActive },
+                    color = if (ctrlActive) Color(0xFF4CAF50) else Color(0xFF555555)
+                )
+                KeyboardKey(
+                    if (altActive) "ALT ON" else "Alt",
+                    onClick = { altActive = !altActive },
+                    color = if (altActive) Color(0xFF4CAF50) else Color(0xFF555555)
+                )
             }
             val rows = listOf(
                 "qwertyuiop",
@@ -191,9 +195,21 @@ private fun VirtualKeyboardView(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     for (char in row) {
-                        KeyboardKey(char.toString(), onClick = { onKeyPress(char) })
+                        KeyboardKey(char.toString(), onClick = {
+                            if (ctrlActive) onKeyPress((char.code - 0x60).toChar())
+                            else onKeyPress(char)
+                        })
                     }
                 }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                KeyboardKey("←", onClick = { onKeyPress('\u001b'); onKeyPress('D'.code.toChar()) })
+                KeyboardKey("↑", onClick = { onKeyPress('\u001b'); onKeyPress('A'.code.toChar()) })
+                KeyboardKey("↓", onClick = { onKeyPress('\u001b'); onKeyPress('B'.code.toChar()) })
+                KeyboardKey("→", onClick = { onKeyPress('\u001b'); onKeyPress('C'.code.toChar()) })
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -205,6 +221,23 @@ private fun VirtualKeyboardView(
                 KeyboardKey("Hide", onClick = onDismiss)
             }
         }
+    }
+}
+
+@Composable
+private fun KeyboardKey(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFF555555)
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(40.dp).padding(horizontal = 2.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(text, color = Color.White, style = MaterialTheme.typography.labelSmall)
     }
 }
 
