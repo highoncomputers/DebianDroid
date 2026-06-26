@@ -90,6 +90,16 @@ fun SetupScreen(
                 textAlign = TextAlign.Center
             )
 
+            if (progress.phase == SetupPhase.ERROR && progress.error != null) {
+                Text(
+                    text = progress.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
             LinearProgressIndicator(
                 progress = { progress.progress },
                 modifier = Modifier.fillMaxWidth().height(8.dp),

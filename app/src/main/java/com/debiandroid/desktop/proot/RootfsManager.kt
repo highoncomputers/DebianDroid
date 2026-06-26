@@ -29,8 +29,9 @@ class RootfsManager(private val context: Context) {
     val isSetupComplete get() = File(rootfsDir, "etc/debian_version").exists()
 
     companion object {
-        const val ROOTFS_URL = "https://github.com/debiandroid/rootfs/releases/latest/download/debian-trixie-arm64.tar.gz"
-        const val CHECKSUM_URL = "https://github.com/debiandroid/rootfs/releases/latest/download/debian-trixie-arm64.tar.gz.sha256"
+        const val ROOTFS_TAG = "rootfs-1"
+        val ROOTFS_URL get() = "https://github.com/highoncomputers/DebianDroid/releases/download/$ROOTFS_TAG/debian-trixie-arm64.tar.gz"
+        val CHECKSUM_URL get() = "https://github.com/highoncomputers/DebianDroid/releases/download/$ROOTFS_TAG/debian-trixie-arm64.tar.gz.sha256"
     }
 
     suspend fun setup() = withContext(Dispatchers.IO) {

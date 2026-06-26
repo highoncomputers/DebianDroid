@@ -5,6 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -70,61 +74,71 @@ fun DebianDroidNavHost(
     val navController = rememberNavController()
     val startDestination = if (isSetupComplete) "home" else "onboarding"
     var isDesktopRunning by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val scope = rememberCoroutineScope()
 
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable("onboarding") {
-            OnboardingScreen(
-                onGetStarted = { navController.navigate("setup") { popUpTo("onboarding") { inclusive = true } } }
-            )
-        }
-        composable("setup") {
-            SetupScreen(
-                rootfsManager = rootfsManager,
-                onComplete = {
-                    scope.launch {
-                        sessionManager.setSetupComplete(true)
-                        navController.navigate("home") { popUpTo("setup") { inclusive = true } }
-                    }
-                },
-                onError = { }
-            )
-        }
-        composable("home") {
-            HomeScreen(
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
+            NavHost(
                 navController = navController,
-                isDesktopRunning = isDesktopRunning
-            )
-        }
-        composable("desktop") {
-            val vncPassword by sessionManager.vncPassword.collectAsState(initial = "debian")
-            DesktopScreen(
-                onBack = { navController.popBackStack() },
-                vncPassword = vncPassword,
-                resolution = "1280x720"
-            )
-        }
-        composable("terminal") {
-            TerminalScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-        composable("files") {
-            FileManagerScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
-        composable("settings") {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onReinstall = {
-                    scope.launch {
-                        sessionManager.setSetupComplete(false)
-                        navController.navigate("setup") { popUpTo("home") { inclusive = true } }
-                    }
+                startDestination = startDestination,
+                modifier = Modifier.padding(padding)
+            ) {
+                composable("onboarding") {
+                    OnboardingScreen(
+                        onGetStarted = { navController.navigate("setup") { popUpTo("onboarding") { inclusive = true } } }
+                    )
                 }
-            )
+                composable("setup") {
+                    SetupScreen(
+                        rootfsManager = rootfsManager,
+                        onComplete = {
+                            scope.launch {
+                                sessionManager.setSetupComplete(true)
+                                navController.navigate("home") { popUpTo("setup") { inclusive = true } }
+                            }
+                        },
+                        onError = { msg ->
+                            scope.launch { snackbarHostState.showSnackbar(msg) }
+                        }
+                    )
+                }
+                composable("home") {
+                    HomeScreen(
+                        navController = navController,
+                        isDesktopRunning = isDesktopRunning
+                    )
+                }
+                composable("desktop") {
+                    val vncPassword by sessionManager.vncPassword.collectAsState(initial = "debian")
+                    DesktopScreen(
+                        onBack = { navController.popBackStack() },
+                        vncPassword = vncPassword,
+                        resolution = "1280x720"
+                    )
+                }
+                composable("terminal") {
+                    TerminalScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable("files") {
+                    FileManagerScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+                composable("settings") {
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        onReinstall = {
+                            scope.launch {
+                                sessionManager.setSetupComplete(false)
+                                navController.navigate("setup") { popUpTo("home") { inclusive = true } }
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
-}
