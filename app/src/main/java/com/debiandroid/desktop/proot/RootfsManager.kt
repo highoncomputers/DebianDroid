@@ -63,7 +63,14 @@ class RootfsManager(private val context: Context) {
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = 30000
         conn.readTimeout = 30000
+        conn.instanceFollowRedirects = true
         conn.connect()
+
+        val responseCode = conn.responseCode
+        if (responseCode !in 200..299) {
+            conn.disconnect()
+            throw IOException("Server returned HTTP $responseCode")
+        }
 
         val totalSize = conn.contentLengthLong
         val input = BufferedInputStream(conn.inputStream)
@@ -73,33 +80,39 @@ class RootfsManager(private val context: Context) {
         var lastUpdate = System.currentTimeMillis()
         var lastBytes = 0L
 
-        input.use { inp ->
-            output.use { out ->
-                while (true) {
-                    val bytes = inp.read(buffer)
-                    if (bytes == -1) break
-                    out.write(buffer, 0, bytes)
-                    downloaded += bytes
+        try {
+            input.use { inp ->
+                output.use { out ->
+                    while (true) {
+                        val bytes = inp.read(buffer)
+                        if (bytes == -1) break
+                        out.write(buffer, 0, bytes)
+                        downloaded += bytes
 
-                    val now = System.currentTimeMillis()
-                    if (now - lastUpdate > 500) {
-                        val elapsed = (now - lastUpdate) / 1000f
-                        val bytesSince = downloaded - lastBytes
-                        val speed = if (elapsed > 0) (bytesSince / elapsed).toLong() else 0L
-                        val progress = if (totalSize > 0) downloaded.toFloat() / totalSize else 0f
-                        val remaining = if (speed > 0) (totalSize - downloaded) / speed else 0L
+                        val now = System.currentTimeMillis()
+                        if (now - lastUpdate > 500) {
+                            val elapsed = (now - lastUpdate) / 1000f
+                            val bytesSince = downloaded - lastBytes
+                            val speed = if (elapsed > 0) (bytesSince / elapsed).toLong() else 0L
+                            val p = if (totalSize > 0) downloaded.toFloat() / totalSize else 0f
+                            val remaining = if (speed > 0) (totalSize - downloaded) / speed else 0L
 
-                        _progress.value = SetupProgress(
-                            phase = SetupPhase.DOWNLOADING,
-                            progress = progress,
-                            speed = formatSpeed(speed),
-                            eta = formatTime(remaining)
-                        )
-                        lastUpdate = now
-                        lastBytes = downloaded
+                            _progress.value = SetupProgress(
+                                phase = SetupPhase.DOWNLOADING,
+                                progress = p,
+                                speed = formatSpeed(speed),
+                                eta = formatTime(remaining)
+                            )
+                            lastUpdate = now
+                            lastBytes = downloaded
+                        }
                     }
                 }
             }
+        } catch (e: Exception) {
+            file.delete()
+            conn.disconnect()
+            throw e
         }
         conn.disconnect()
     }
@@ -150,11 +163,11 @@ class RootfsManager(private val context: Context) {
 
         // Create debian user
         val passwd = File(rootfsDir, "etc/passwd")
-        if (!passwd.readText().contains("debian:")) {
+        if (passwd.exists() && !passwd.readText().contains("debian:")) {
             passwd.appendText("debian:x:1000:1000:Debian User,,,:/home/debian:/bin/bash\n")
         }
         val shadow = File(rootfsDir, "etc/shadow")
-        if (!shadow.readText().contains("debian:")) {
+        if (shadow.exists() && !shadow.readText().contains("debian:")) {
             shadow.appendText("debian:*:19000:0:99999:7:::\n")
         }
 
@@ -171,7 +184,6 @@ class RootfsManager(private val context: Context) {
         data class Entry(val name: String, val size: Long, val isDirectory: Boolean, val isExecutable: Boolean)
 
         private val buffer = ByteArray(512)
-        private var currentEntry: Entry? = null
         private var remainingBytes: Long = 0
 
         fun nextEntry(): Entry? {
@@ -189,8 +201,7 @@ class RootfsManager(private val context: Context) {
             val mode = modeStr.toIntOrNull(8) ?: 0
 
             remainingBytes = size
-            currentEntry = Entry(name, size, type == 53, mode and 64 != 0)
-            return currentEntry
+            return Entry(name, size, type == 53, mode and 64 != 0)
         }
 
         fun readAll(out: OutputStream) {
@@ -198,7 +209,10 @@ class RootfsManager(private val context: Context) {
             while (remainingBytes > 0) {
                 val toRead = minOf(buf.size.toLong(), remainingBytes).toInt()
                 val read = input.read(buf, 0, toRead)
-                if (read == -1) break
+                if (read == -1) {
+                    remainingBytes = 0
+                    break
+                }
                 out.write(buf, 0, read)
                 remainingBytes -= read
             }
@@ -210,7 +224,14 @@ class RootfsManager(private val context: Context) {
 
         private fun skipPadding() {
             val skip = (512 - (remainingBytes % 512)) % 512
-            if (skip > 0) input.skip(skip)
+            if (skip > 0) {
+                var toSkip = skip
+                while (toSkip > 0) {
+                    val skipped = input.skip(toSkip)
+                    if (skipped <= 0) break
+                    toSkip -= skipped
+                }
+            }
         }
     }
 

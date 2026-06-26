@@ -29,6 +29,8 @@ class SetupService : Service() {
                 stopSelf()
             } catch (e: Exception) {
                 updateNotification("Setup failed: ${e.message}", -1)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
             }
         }
 

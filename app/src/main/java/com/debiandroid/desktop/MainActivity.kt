@@ -34,8 +34,10 @@ class MainActivity : ComponentActivity() {
         rootfsManager = RootfsManager(this)
         prootRunner = ProotRunner(this)
 
-        val isSetupComplete = runBlocking {
-            sessionManager.isSetupComplete.first()
+        val isSetupComplete = try {
+            runBlocking { sessionManager.isSetupComplete.first() }
+        } catch (e: Exception) {
+            false
         }
 
         setContent {

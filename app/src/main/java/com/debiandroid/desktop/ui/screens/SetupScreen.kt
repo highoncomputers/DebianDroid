@@ -117,7 +117,12 @@ fun SetupScreen(
             }
 
             if (progress.phase == SetupPhase.ERROR) {
-                Button(onClick = { /* retry */ }, colors = ButtonDefaults.buttonColors(containerColor = StatusError)) {
+                Button(onClick = {
+                    isStarted = true
+                    scope.launch {
+                        withContext(Dispatchers.IO) { rootfsManager.setup() }
+                    }
+                }, colors = ButtonDefaults.buttonColors(containerColor = StatusError)) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Retry")
