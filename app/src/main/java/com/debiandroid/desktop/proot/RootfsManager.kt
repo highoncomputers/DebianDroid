@@ -39,8 +39,11 @@ class RootfsManager(private val context: Context) {
                 return@withContext
             }
 
-            rootfsDir.mkdirs()
+            // Clean up any partial state from a previous failed attempt
             val tarFile = File(filesDir, "rootfs.tar.gz")
+            tarFile.delete()
+            rootfsDir.deleteRecursively()
+            rootfsDir.mkdirs()
 
             download(tarFile)
             extract(tarFile)
