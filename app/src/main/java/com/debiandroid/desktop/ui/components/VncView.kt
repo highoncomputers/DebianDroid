@@ -14,35 +14,44 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
 import com.debiandroid.desktop.vnc.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
 
 @Composable
 fun VncView(
     connection: VncConnection,
     modifier: Modifier = Modifier
 ) {
-    var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var fbWidth by remember { mutableIntStateOf(1280) }
     var fbHeight by remember { mutableIntStateOf(720) }
     var scale by remember { mutableFloatStateOf(1f) }
 
     LaunchedEffect(connection) {
+        var framebuffer = Framebuffer(fbWidth, fbHeight, IntArray(fbWidth * fbHeight))
         while (isActive) {
             try {
                 val update = connection.framebufferUpdates.receive()
                 for (rect in update.rectangles) {
                     when (rect.encoding) {
+                        Encodings.RAW, Encodings.TIGHT -> {
+                            rect.pixelData?.let { pixels ->
+                                framebuffer.updateRegion(rect.x, rect.y, rect.w, rect.h, pixels)
+                            }
+                        }
+                        Encodings.COPY_RECT -> {
+                            framebuffer.copyRect(rect.srcX, rect.srcY, rect.x, rect.y, rect.w, rect.h)
+                        }
                         Encodings.DESKTOP_SIZE -> {
                             fbWidth = rect.w
                             fbHeight = rect.h
+                            framebuffer = Framebuffer(rect.w, rect.h, IntArray(rect.w * rect.h))
                         }
                     }
                 }
-                if (bitmap == null) {
-                    val bmp = Bitmap.createBitmap(fbWidth, fbHeight, Bitmap.Config.ARGB_8888)
-                    bitmap = bmp.asImageBitmap()
-                }
-            } catch (_: kotlinx.coroutines.channels.ClosedReceiveChannelException) {
+                val bmp = Bitmap.createBitmap(fbWidth, fbHeight, Bitmap.Config.ARGB_8888)
+                bmp.setPixels(framebuffer.pixels, 0, fbWidth, 0, 0, fbWidth, fbHeight)
+                imageBitmap = bmp.asImageBitmap()
+            } catch (_: ClosedReceiveChannelException) {
                 break
             } catch (_: Exception) {
                 break
@@ -68,7 +77,7 @@ fun VncView(
                 )
             }
     ) {
-        bitmap?.let {
+        imageBitmap?.let {
             drawImage(
                 image = it,
                 dstSize = IntSize(size.width.toInt(), size.height.toInt())

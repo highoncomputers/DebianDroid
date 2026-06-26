@@ -16,7 +16,11 @@ import com.debiandroid.desktop.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController, isDesktopRunning: Boolean = false) {
+fun HomeScreen(
+    navController: NavController,
+    isDesktopRunning: Boolean = false,
+    onToggleDesktop: () -> Unit = {}
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -88,7 +92,6 @@ fun HomeScreen(navController: NavController, isDesktopRunning: Boolean = false) 
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = isDesktopRunning
                 ) {
                     Icon(Icons.Default.DesktopWindows, contentDescription = null)
                     Spacer(Modifier.width(12.dp))
@@ -133,7 +136,7 @@ fun HomeScreen(navController: NavController, isDesktopRunning: Boolean = false) 
                     QuickActionCard(
                         icon = Icons.Default.RestartAlt,
                         title = if (isDesktopRunning) "Restart" else "Start",
-                        onClick = { /* toggle desktop */ },
+                        onClick = onToggleDesktop,
                         modifier = Modifier.weight(1f)
                     )
                     QuickActionCard(

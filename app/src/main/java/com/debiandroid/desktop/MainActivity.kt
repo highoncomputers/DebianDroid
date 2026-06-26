@@ -1,5 +1,6 @@
 package com.debiandroid.desktop
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,12 +13,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.debiandroid.desktop.data.SessionManager
 import com.debiandroid.desktop.proot.ProotRunner
 import com.debiandroid.desktop.proot.RootfsManager
+import com.debiandroid.desktop.service.DesktopService
 import com.debiandroid.desktop.ui.screens.*
 import com.debiandroid.desktop.ui.theme.DebianDroidTheme
 import kotlinx.coroutines.*
@@ -103,9 +106,16 @@ fun DebianDroidNavHost(
                     )
                 }
                 composable("home") {
+                    val context = LocalContext.current
                     HomeScreen(
                         navController = navController,
-                        isDesktopRunning = isDesktopRunning
+                        isDesktopRunning = isDesktopRunning,
+                        onToggleDesktop = {
+                            val intent = Intent(context, DesktopService::class.java)
+                            intent.action = if (isDesktopRunning) DesktopService.ACTION_STOP else DesktopService.ACTION_START
+                            context.startService(intent)
+                            isDesktopRunning = !isDesktopRunning
+                        }
                     )
                 }
                 composable("desktop") {

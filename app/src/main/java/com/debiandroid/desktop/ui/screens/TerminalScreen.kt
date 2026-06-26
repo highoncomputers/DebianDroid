@@ -11,11 +11,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.debiandroid.desktop.proot.ProotRunner
 import com.debiandroid.desktop.terminal.TerminalSession
 import com.debiandroid.desktop.terminal.TerminalLine
 import com.debiandroid.desktop.ui.theme.*
@@ -29,12 +31,19 @@ fun TerminalScreen(
     var input by remember { mutableStateOf(TextFieldValue("")) }
     val scrollState = rememberScrollState()
     val terminalState by session.state.collectAsState()
+    val context = LocalContext.current
+    val prootRunner = remember { ProotRunner(context) }
 
     LaunchedEffect(Unit) {
-        session.start(
-            command = listOf("/system/bin/sh"),
-            env = mapOf("TERM" to "xterm-256color")
-        )
+        val process = prootRunner.createShellProcess()
+        if (process != null) {
+            session.startWithProcess(process)
+        } else {
+            session.start(
+                command = listOf("/system/bin/sh"),
+                env = mapOf("TERM" to "xterm-256color")
+            )
+        }
     }
 
     DisposableEffect(Unit) {

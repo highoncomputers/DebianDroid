@@ -100,6 +100,24 @@ class TerminalSession {
         writeInput("$cmd\n")
     }
 
+    fun startWithProcess(process: Process) {
+        this.process = process
+        writer = process.outputStream
+        _state.value = _state.value.copy(isRunning = true)
+        readerJob = scope.launch {
+            try {
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                var char: Int
+                while (reader.read().also { char = it } != -1) {
+                    processChar(char.toChar())
+                }
+            } catch (_: IOException) {
+            } finally {
+                _state.value = _state.value.copy(isRunning = false)
+            }
+        }
+    }
+
     fun stop() {
         readerJob?.cancel()
         process?.destroy()

@@ -46,7 +46,12 @@ class DesktopService : Service() {
     private fun stop() {
         prootRunner.stop()
         updateNotification("Debian Desktop stopped")
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (Build.VERSION.SDK_INT >= 34) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
         stopSelf()
     }
 

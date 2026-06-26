@@ -9,8 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,16 +22,22 @@ fun FileManagerScreen(
     onBack: () -> Unit,
     sharedDirPath: String = ""
 ) {
-    var currentPath by remember { mutableStateOf(sharedDirPath.ifEmpty { "/shared" }) }
+    val context = LocalContext.current
+    val sharedDir = remember { File(context.filesDir, "shared") }
+    var currentPath by remember { mutableStateOf(sharedDirPath.ifEmpty { sharedDir.absolutePath }) }
     var files by remember { mutableStateOf(listOf<File>()) }
     var showAndroidPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentPath) {
-        val dir = File(currentPath)
-        if (dir.exists()) {
-            files = dir.listFiles()?.sortedWith(
-                compareByDescending<File> { it.isDirectory }.thenBy { it.name }
-            ) ?: emptyList()
+        withContext(Dispatchers.IO) {
+            val dir = File(currentPath)
+            if (dir.exists()) {
+                files = dir.listFiles()?.sortedWith(
+                    compareByDescending<File> { it.isDirectory }.thenBy { it.name }
+                ) ?: emptyList()
+            } else {
+                files = emptyList()
+            }
         }
     }
 
