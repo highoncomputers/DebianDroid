@@ -116,7 +116,7 @@ EOF
     }
 
     private fun startProcess(cmd: List<String>) {
-        if (process?.isAlive == true) return
+        if (process?.let { p -> try { p.exitValue(); false } catch (_: IllegalThreadStateException) { true } } == true) return
         try {
             val pb = ProcessBuilder(cmd)
             pb.environment()["LD_LIBRARY_PATH"] = "${filesDir.absolutePath}/proot"
@@ -153,7 +153,7 @@ EOF
         _state.value = ProotState(isRunning = false)
     }
 
-    fun isAlive(): Boolean = process?.isAlive == true
+    fun isAlive(): Boolean = process?.let { p -> try { p.exitValue(); false } catch (_: IllegalThreadStateException) { true } } == true
 
     fun cleanup() {
         stop()
