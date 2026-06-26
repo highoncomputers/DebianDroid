@@ -49,6 +49,12 @@ android {
         compose = true
     }
 
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
     aaptOptions {
         noCompress += listOf("gz")
     }
@@ -57,13 +63,6 @@ android {
 tasks.configureEach {
     if (name == "compressReleaseAssets") {
         enabled = false
-    }
-}
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
     }
 }
 
