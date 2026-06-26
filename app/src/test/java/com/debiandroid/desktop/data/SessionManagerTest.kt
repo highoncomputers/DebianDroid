@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -13,7 +14,12 @@ import org.robolectric.RobolectricTestRunner
 class SessionManagerTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val sessionManager = SessionManager(context)
+    private lateinit var sessionManager: SessionManager
+
+    @Before
+    fun setUp() {
+        sessionManager = SessionManager(context)
+    }
 
     @Test
     fun `default setup complete is false`() = runBlocking {
