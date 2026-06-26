@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,7 +58,7 @@ fun TerminalScreen(
                 title = { Text("Terminal") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 actions = {
@@ -136,7 +138,7 @@ fun TerminalScreen(
                         session.sendCommand(input.text)
                         input = TextFieldValue("")
                     }) {
-                        Icon(Icons.Default.Send, "Send", tint = TerminalGreen)
+                        Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = TerminalGreen)
                     }
                 }
             }

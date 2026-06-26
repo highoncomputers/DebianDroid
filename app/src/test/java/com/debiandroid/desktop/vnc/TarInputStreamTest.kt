@@ -58,8 +58,9 @@ class TarInputStreamTest {
         val modeStr = "0000644".toByteArray()
         modeStr.copyInto(header, 100, 0, modeStr.size)
 
-        val fullInput = header + data + ByteArray(512 - data.size % 512)
-        val stream = ByteArrayInputStream(fullInput.toByteArray())
+        val padding = ByteArray(512 - data.size % 512)
+        val fullInput = header + data + padding
+        val stream = ByteArrayInputStream(fullInput)
         val tar = RootfsManager.TarInputStream(stream)
         val entry = tar.nextEntry()
 
