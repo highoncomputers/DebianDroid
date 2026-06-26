@@ -29,19 +29,6 @@ class SessionManagerTest {
     }
 
     @Test
-    fun `default vnc password is debian`() = runBlocking {
-        val password = sessionManager.vncPassword.first()
-        assertEquals("debian", password)
-    }
-
-    @Test
-    fun `set vnc password persists`() = runBlocking {
-        sessionManager.setVncPassword("newpass123")
-        val password = sessionManager.vncPassword.first()
-        assertEquals("newpass123", password)
-    }
-
-    @Test
     fun `default resolution is 1280x720`() = runBlocking {
         val resolution = sessionManager.desktopResolution.first()
         assertEquals("1280x720", resolution)
@@ -52,6 +39,19 @@ class SessionManagerTest {
         sessionManager.setDesktopResolution("1920x1080")
         val resolution = sessionManager.desktopResolution.first()
         assertEquals("1920x1080", resolution)
+    }
+
+    @Test
+    fun `default vnc password is debian`() = runBlocking {
+        val password = sessionManager.vncPassword.first()
+        assertEquals("debian", password)
+    }
+
+    @Test
+    fun `set vnc password persists`() = runBlocking {
+        sessionManager.setVncPassword("newpass123")
+        val password = sessionManager.vncPassword.first()
+        assertEquals("newpass123", password)
     }
 
     @Test

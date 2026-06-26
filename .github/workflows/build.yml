@@ -60,6 +60,9 @@ jobs:
       - name: Run lint checks
         run: ./gradlew lint
 
+      - name: Run ktlint
+        run: ./gradlew ktlint
+
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
