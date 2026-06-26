@@ -61,6 +61,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         prootRunner.cleanup()
         super.onDestroy()
+        }
     }
 }
 
