@@ -112,11 +112,12 @@ class RfbProtocol(
 
     companion object {
         internal fun reverseBits(b: Byte): Byte {
-        var x = b.toInt() and 0xFF
-        x = (x and 0x55 shl 1) or (x and 0xAA shr 1)
-        x = (x and 0x33 shl 2) or (x and 0xCC shr 2)
-        x = (x shl 4) or (x shr 4)
-        return (x and 0xFF).toByte()
+            var x = b.toInt() and 0xFF
+            x = (x and 0x55 shl 1) or (x and 0xAA shr 1)
+            x = (x and 0x33 shl 2) or (x and 0xCC shr 2)
+            x = (x shl 4) or (x shr 4)
+            return (x and 0xFF).toByte()
+        }
     }
 
     private fun desEncrypt(data: ByteArray, key: ByteArray): ByteArray {
