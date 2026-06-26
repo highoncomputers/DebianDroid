@@ -79,4 +79,3 @@ class SessionManager(private val context: Context) {
         _vncPassword.value = "debian"
     }
 }
-}
