@@ -82,7 +82,7 @@ class RootfsManager(private val context: Context) {
         val totalSize = conn.contentLengthLong
         val input = BufferedInputStream(conn.inputStream)
         val output = FileOutputStream(file)
-        val buffer = ByteArray(8192)
+        val buffer = ByteArray(65536)
         var downloaded = 0L
         var lastUpdate = System.currentTimeMillis()
         var lastBytes = 0L

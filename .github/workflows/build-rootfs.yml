@@ -27,8 +27,12 @@ jobs:
           sudo cp /usr/bin/qemu-aarch64-static rootfs/usr/bin/
           sudo chroot rootfs/ /debootstrap/debootstrap --second-stage
           sudo chroot rootfs/ apt-get update
-          sudo chroot rootfs/ apt-get install -y xfce4 xfce4-goodies tigervnc-standalone-server tigervnc-xorg-extension dbus-x11 pulseaudio x11-utils wget curl nano
+          sudo chroot rootfs/ apt-get install -y xfce4 tigervnc-standalone-server dbus-x11 x11-utils wget
           sudo chroot rootfs/ apt-get clean
+          sudo rm -rf rootfs/var/lib/apt/lists/*
+          sudo rm -rf rootfs/usr/share/doc/*
+          sudo rm -rf rootfs/usr/share/man/*
+          sudo rm -rf rootfs/usr/share/locale/*
 
       - name: Configure rootfs
         run: |
