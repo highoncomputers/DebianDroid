@@ -97,9 +97,14 @@ class RootfsManager(private val context: Context) {
 
     private suspend fun extractTarEntries(input: InputStream, progressFn: () -> Float) {
         val tarInput = TarInputStream(input)
+        val rootfsCanonical = rootfsDir.canonicalPath
         var entry = tarInput.nextEntry()
         while (entry != null) {
             val outputFile = File(rootfsDir, entry.name)
+            val outputCanonical = outputFile.canonicalPath
+            if (!outputCanonical.startsWith(rootfsCanonical + File.separator) && outputCanonical != rootfsCanonical) {
+                throw SecurityException("Path traversal blocked: ${entry.name}")
+            }
             if (entry.isDirectory) {
                 outputFile.mkdirs()
             } else {
@@ -156,7 +161,11 @@ class RootfsManager(private val context: Context) {
 
         fun nextEntry(): Entry? {
             skipPadding()
-            if (readBlock(buffer) == -1) return null
+            try {
+                readBlock(buffer)
+            } catch (_: IOException) {
+                return null
+            }
             if (buffer.all { it == 0.toByte() }) return null
 
             val name = String(buffer, 0, 100).trimEnd('\u0000').trimEnd('/')
@@ -186,7 +195,14 @@ class RootfsManager(private val context: Context) {
             }
         }
 
-        private fun readBlock(buffer: ByteArray): Int = input.read(buffer)
+        private fun readBlock(buffer: ByteArray) {
+            var total = 0
+            while (total < buffer.size) {
+                val read = input.read(buffer, total, buffer.size - total)
+                if (read == -1) throw IOException("Unexpected end of tar stream")
+                total += read
+            }
+        }
 
         private fun skipPadding() {
             val skip = (512 - (remainingBytes % 512)) % 512

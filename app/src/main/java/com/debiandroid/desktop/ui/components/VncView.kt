@@ -6,10 +6,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntSize
 import com.debiandroid.desktop.vnc.*
@@ -24,6 +22,7 @@ fun VncView(
     var imageBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var fbWidth by remember { mutableIntStateOf(1280) }
     var fbHeight by remember { mutableIntStateOf(720) }
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var scale by remember { mutableFloatStateOf(1f) }
 
     LaunchedEffect(connection) {
@@ -45,10 +44,11 @@ fun VncView(
                             fbWidth = rect.w
                             fbHeight = rect.h
                             framebuffer = Framebuffer(rect.w, rect.h, IntArray(rect.w * rect.h))
+                            bitmap = null
                         }
                     }
                 }
-                val bmp = Bitmap.createBitmap(fbWidth, fbHeight, Bitmap.Config.ARGB_8888)
+                val bmp = bitmap ?: Bitmap.createBitmap(fbWidth, fbHeight, Bitmap.Config.ARGB_8888).also { bitmap = it }
                 bmp.setPixels(framebuffer.pixels, 0, fbWidth, 0, 0, fbWidth, fbHeight)
                 imageBitmap = bmp.asImageBitmap()
             } catch (_: ClosedReceiveChannelException) {

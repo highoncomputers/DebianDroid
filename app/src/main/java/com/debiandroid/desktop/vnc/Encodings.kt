@@ -1,5 +1,6 @@
 package com.debiandroid.desktop.vnc
 
+import kotlin.math.min
 import java.util.zip.Inflater
 
 object Encodings {
@@ -19,21 +20,22 @@ object Encodings {
             val subEncoding = (control shr 4) and 0x0F
 
             when (subEncoding) {
-                0 -> { // Basic (zlib compressed)
+                0 -> {
                     val resetStream = (control and 0x0F) > 0
                     if (resetStream) inflater.reset()
-                    
+
                     val rawLen = readCompactSize(data, dataOffset)
                     dataOffset += compactSizeBytes(data, dataOffset)
-                    
+
                     val compressed = data.copyOfRange(dataOffset, dataOffset + rawLen)
                     dataOffset += rawLen
 
-                    val decompressed = ByteArray(width * height * 3)
+                    val decompLen = width.toLong() * height * 3
+                    val decompressed = ByteArray(min(decompLen, Int.MAX_VALUE.toLong()).toInt())
                     inflater.setInput(compressed)
                     val decoded = inflater.inflate(decompressed)
-                    
-                    for (i in 0 until minOf(decoded / 3, width * height - pixelOffset)) {
+
+                    for (i in 0 until min(decoded / 3, width * height - pixelOffset)) {
                         val off = i * 3
                         val r = decompressed[off].toInt() and 0xFF
                         val g = decompressed[off + 1].toInt() and 0xFF
@@ -41,18 +43,16 @@ object Encodings {
                         pixels[pixelOffset++] = (0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
                     }
                 }
-                1 -> { // Fill (solid color)
+                1 -> {
                     val r = data[dataOffset++].toInt() and 0xFF
                     val g = data[dataOffset++].toInt() and 0xFF
                     val b = data[dataOffset++].toInt() and 0xFF
                     val color = (0xFF000000.toInt()) or (r shl 16) or (g shl 8) or b
-                    val count = minOf(width * height - pixelOffset, width * height)
+                    val count = min(width * height - pixelOffset, width * height)
                     pixels.fill(color, pixelOffset, pixelOffset + count)
                     pixelOffset += count
                 }
-                else -> { // Fallback: skip remaining data
-                    break
-                }
+                else -> break
             }
         }
         inflater.end()
@@ -62,7 +62,9 @@ object Encodings {
     private fun readCompactSize(data: ByteArray, offset: Int): Int {
         var result = 0
         var pos = offset
-        while (pos < data.size) {
+        var iter = 0
+        while (pos < data.size && iter < 6) {
+            iter++
             val b = data[pos++].toInt() and 0xFF
             result += b and 0x7F
             if (b and 0x80 == 0) break
@@ -74,12 +76,12 @@ object Encodings {
     private fun compactSizeBytes(data: ByteArray, offset: Int): Int {
         var count = 0
         var pos = offset
-        while (pos < data.size) {
+        var iter = 0
+        while (pos < data.size && iter < 6) {
+            iter++
             count++
             if (data[pos++].toInt() and 0x80 == 0) break
         }
         return count
     }
-
-    private fun minOf(a: Int, b: Int) = if (a < b) a else b
 }

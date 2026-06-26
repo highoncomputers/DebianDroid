@@ -26,6 +26,10 @@ class ProotRunner(private val context: Context) {
     private val busybox: File get() = File(filesDir, "busybox/busybox")
 
     fun startVncServer(vncPassword: String, resolution: String = "1280x720") {
+        val passFile = File(filesDir, ".vnc_pass")
+        passFile.writeText(vncPassword)
+        passFile.setReadable(true, true)
+
         val cmd = buildProotCommand(
             "/bin/bash", "-c", """
                 set -e
@@ -33,7 +37,8 @@ class ProotRunner(private val context: Context) {
                 export USER=debian
                 if ! pgrep -x Xvnc > /dev/null; then
                     mkdir -p /home/debian/.vnc
-                    echo "$vncPassword" | vncpasswd -f > /home/debian/.vnc/passwd
+                    cat /tmp/.vnc_pass | vncpasswd -f > /home/debian/.vnc/passwd
+                    rm -f /tmp/.vnc_pass
                     chmod 600 /home/debian/.vnc/passwd
                     cat > /home/debian/.vnc/xstartup << 'EOF'
 #!/bin/bash
@@ -117,7 +122,7 @@ EOF
             pb.environment()["PULSE_SERVER"] = "127.0.0.1"
             process = pb.start()
             val pid = try {
-                process!!::class.java.getMethod("pid").invoke(process) as Int
+                (process!!::class.java.getMethod("pid").invoke(process) as Number).toInt()
             } catch (_: Exception) {
                 -1
             }

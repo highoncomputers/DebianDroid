@@ -8,6 +8,7 @@ import java.nio.ByteOrder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
+import kotlin.math.min
 
 data class FramebufferUpdate(
     val rectangles: List<RectangleData>
@@ -28,6 +29,10 @@ class RfbProtocol(
     private val input: InputStream = socket.getInputStream()
     private val output: OutputStream = socket.getOutputStream()
     private var bpp: Int = 4
+    var fbWidth: Int = 0
+        private set
+    var fbHeight: Int = 0
+        private set
 
     fun getBpp(): Int = bpp
 
@@ -127,8 +132,8 @@ class RfbProtocol(
     }
 
     private fun doServerInit() {
-        val fbWidth = ByteBuffer.wrap(readFully(2)).order(ByteOrder.BIG_ENDIAN).short.toInt() and 0xFFFF
-        val fbHeight = ByteBuffer.wrap(readFully(2)).order(ByteOrder.BIG_ENDIAN).short.toInt() and 0xFFFF
+        fbWidth = ByteBuffer.wrap(readFully(2)).order(ByteOrder.BIG_ENDIAN).short.toInt() and 0xFFFF
+        fbHeight = ByteBuffer.wrap(readFully(2)).order(ByteOrder.BIG_ENDIAN).short.toInt() and 0xFFFF
         
         val bppVal = readFully(1)[0].toInt() and 0xFF
         bpp = bppVal / 8
@@ -245,8 +250,9 @@ class RfbProtocol(
 
             when (encoding) {
                 Encodings.RAW -> {
-                    val rawSize = w * h * bpp
-                    val rawData = readFully(rawSize)
+                    val rawSize = w.toLong() * h * bpp
+                    if (rawSize > Int.MAX_VALUE) throw VncProtocolException("RAW rect too large: ${rawSize}bytes")
+                    val rawData = readFully(rawSize.toInt())
                     rects.add(RectangleData(x, y, w, h, Encodings.RAW, pixelData = rawData.toIntArray()))
                 }
                 Encodings.COPY_RECT -> {
@@ -283,7 +289,9 @@ class RfbProtocol(
                 0 -> { // Basic zlib
                     val rawLen = readCompactSize()
                     val compressed = readFully(rawLen)
-                    val decompressed = ByteArray(width * height * 3)
+                    val decompLen = width.toLong() * height * 3
+                    if (decompLen > Int.MAX_VALUE) throw VncProtocolException("Tight rect too large: ${decompLen}bytes")
+                    val decompressed = ByteArray(decompLen.toInt())
                     val inflater = java.util.zip.Inflater()
                     inflater.setInput(compressed)
                     val decoded = inflater.inflate(decompressed)
@@ -327,8 +335,6 @@ class RfbProtocol(
             socket.close()
         } catch (_: Exception) {}
     }
-
-    private fun minOf(a: Int, b: Int) = if (a < b) a else b
 
     private fun ByteArray.toIntArray(): IntArray {
         val result = IntArray(this.size)

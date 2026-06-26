@@ -40,6 +40,10 @@ fun DesktopScreen(
     val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(vncPassword) {
+        connection?.disconnect()
+        connection = null
+        error = null
+        isConnected = false
         try {
             val conn = VncConnection(password = vncPassword)
             conn.connect()

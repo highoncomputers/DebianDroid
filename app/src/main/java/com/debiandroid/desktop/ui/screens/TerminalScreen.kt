@@ -63,7 +63,13 @@ fun TerminalScreen(
                     IconButton(onClick = { session.sendCtrlC() }) {
                         Icon(Icons.Default.Cancel, "Ctrl+C")
                     }
-                    IconButton(onClick = { session.stop(); /* restart logic */ }) {
+                    IconButton(onClick = {
+                        session.stop()
+                        val proc = prootRunner.createShellProcess()
+                        if (proc != null) {
+                            session.startWithProcess(proc)
+                        }
+                    }) {
                         Icon(Icons.Default.Refresh, "Restart")
                     }
                 }

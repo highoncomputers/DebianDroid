@@ -3,6 +3,7 @@ package com.debiandroid.desktop.vnc
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
+import java.net.InetSocketAddress
 import java.net.Socket
 
 class VncConnection(
@@ -14,25 +15,39 @@ class VncConnection(
     private var socket: Socket? = null
     private var job: Job? = null
     private val _scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val writeChannel = Channel<suspend RfbProtocol.() -> Unit>(Channel.UNLIMITED)
 
     val framebufferUpdates = Channel<FramebufferUpdate>(CONFLATED)
 
     var isConnected: Boolean = false
         private set
 
+    init {
+        _scope.launch {
+            for (action in writeChannel) {
+                protocol?.action()
+            }
+        }
+    }
+
     suspend fun connect() {
-        socket = Socket(host, port)
+        socket = Socket().apply {
+            connect(InetSocketAddress(host, port), 5000)
+        }
         protocol = RfbProtocol(socket!!, password)
         protocol!!.connect()
         isConnected = true
 
+        val fbWidth = protocol!!.fbWidth
+        val fbHeight = protocol!!.fbHeight
+
         job = _scope.launch {
             try {
-                protocol!!.sendFramebufferUpdateRequest(false, 0, 0, 0, 0)
+                protocol!!.sendFramebufferUpdateRequest(false, 0, 0, fbWidth, fbHeight)
                 while (isActive) {
                     val update = protocol!!.readFramebufferUpdate()
                     framebufferUpdates.send(update)
-                    protocol!!.sendFramebufferUpdateRequest(true, 0, 0, 0, 0)
+                    protocol!!.sendFramebufferUpdateRequest(true, 0, 0, fbWidth, fbHeight)
                 }
             } catch (e: Exception) {
                 isConnected = false
@@ -42,15 +57,15 @@ class VncConnection(
     }
 
     suspend fun requestUpdate(full: Boolean = false) {
-        protocol?.sendFramebufferUpdateRequest(!full, 0, 0, 0, 0)
+        writeChannel.send { sendFramebufferUpdateRequest(if (full) false else true, 0, 0, 0, 0) }
     }
 
     fun sendKey(pressed: Boolean, keysym: Int) {
-        protocol?.let { _scope.launch { it.sendKeyEvent(pressed, keysym) } }
+        writeChannel.trySend { sendKeyEvent(pressed, keysym) }
     }
 
     fun sendPointer(pressed: Boolean, x: Int, y: Int, buttonMask: Int) {
-        protocol?.let { _scope.launch { it.sendPointerEvent(pressed, x, y, buttonMask) } }
+        writeChannel.trySend { sendPointerEvent(pressed, x, y, buttonMask) }
     }
 
     fun sendMouseMove(x: Int, y: Int) {
@@ -59,26 +74,26 @@ class VncConnection(
 
     fun sendLeftClick(x: Int, y: Int) {
         _scope.launch {
-            protocol?.sendPointerEvent(true, x, y, 1)
+            writeChannel.send { sendPointerEvent(true, x, y, 1) }
             delay(50)
-            protocol?.sendPointerEvent(false, x, y, 1)
+            writeChannel.send { sendPointerEvent(false, x, y, 1) }
         }
     }
 
     fun sendRightClick(x: Int, y: Int) {
         _scope.launch {
-            protocol?.sendPointerEvent(true, x, y, 4)
+            writeChannel.send { sendPointerEvent(true, x, y, 4) }
             delay(50)
-            protocol?.sendPointerEvent(false, x, y, 4)
+            writeChannel.send { sendPointerEvent(false, x, y, 4) }
         }
     }
 
     fun sendScroll(deltaY: Int, x: Int, y: Int) {
         val btn = if (deltaY < 0) 5 else 4
         _scope.launch {
-            protocol?.sendPointerEvent(true, x, y, btn)
+            writeChannel.send { sendPointerEvent(true, x, y, btn) }
             delay(30)
-            protocol?.sendPointerEvent(false, x, y, btn)
+            writeChannel.send { sendPointerEvent(false, x, y, btn) }
         }
     }
 
@@ -86,15 +101,16 @@ class VncConnection(
         _scope.launch {
             for (char in text) {
                 val keysym = charToKeysym(char)
-                protocol?.sendKeyEvent(true, keysym)
+                writeChannel.send { sendKeyEvent(true, keysym) }
                 delay(20)
-                protocol?.sendKeyEvent(false, keysym)
+                writeChannel.send { sendKeyEvent(false, keysym) }
                 delay(10)
             }
         }
     }
 
     suspend fun disconnect() {
+        writeChannel.close()
         job?.cancel()
         job?.join()
         protocol?.disconnect()
