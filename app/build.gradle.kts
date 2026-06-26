@@ -55,6 +55,7 @@ android {
         }
     }
 
+    @Suppress("DEPRECATION")
     aaptOptions {
         noCompress += listOf("gz")
     }
@@ -90,24 +91,24 @@ dependencies {
     testImplementation(libs.androidx.test.core)
 }
 
+val ktlint by configurations.creating
+
+dependencies {
+    ktlint("com.pinterest.ktlint:ktlint-cli:1.3.0")
+}
+
 tasks.register<JavaExec>("ktlint") {
     group = "verification"
     description = "Check Kotlin code style"
-    classpath = configurations.maybeCreate("ktlint")
+    classpath = ktlint
     mainClass.set("com.pinterest.ktlint.Main")
     args("src/**/*.kt")
-}
-
-configurations.maybeCreate("ktlint").apply {
-    dependencies.add(
-        dependencies.create("com.pinterest.ktlint:ktlint-cli:1.3.0")
-    )
 }
 
 tasks.register<JavaExec>("ktlintFormat") {
     group = "formatting"
     description = "Fix Kotlin code style violations"
-    classpath = configurations.maybeCreate("ktlint")
+    classpath = ktlint
     mainClass.set("com.pinterest.ktlint.Main")
     args("-F", "src/**/*.kt")
 }
