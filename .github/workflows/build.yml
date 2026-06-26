@@ -60,7 +60,10 @@ jobs:
       - name: Run lint checks
         run: ./gradlew lint
 
-      - name: Run ktlint
+      - name: Run ktlintFormat
+        run: ./gradlew ktlintFormat
+
+      - name: Check ktlint
         run: ./gradlew ktlint
 
       - name: Decode keystore

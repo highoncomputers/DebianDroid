@@ -30,3 +30,4 @@ ktlint_standard_trailing-comma-on-declaration-site = disabled
 ktlint_standard_function-naming = disabled
 ktlint_standard_if-else-wrapping = disabled
 ktlint_standard_no-unused-imports = disabled
+ktlint_standard_max-line-length = disabled
