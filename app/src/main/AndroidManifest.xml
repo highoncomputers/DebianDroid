@@ -38,6 +38,7 @@
 
         <service
             android:name=".service.SetupService"
+            android:foregroundServiceType="dataSync"
             android:exported="false" />
 
     </application>

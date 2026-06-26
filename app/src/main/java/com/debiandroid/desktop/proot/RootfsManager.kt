@@ -1,6 +1,7 @@
 package com.debiandroid.desktop.proot
 
 import android.content.Context
+import android.os.StatFs
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,9 @@ class RootfsManager(private val context: Context) {
                 return@withContext
             }
 
+            // Check available storage (need ~2GB free)
+            checkStorageSpace()
+
             // Clean up any partial state from a previous failed attempt
             val tarFile = File(filesDir, "rootfs.tar.gz")
             tarFile.delete()
@@ -56,7 +60,6 @@ class RootfsManager(private val context: Context) {
                 phase = SetupPhase.ERROR,
                 error = e.message ?: "Unknown error"
             )
-            throw e
         }
     }
 
@@ -181,6 +184,16 @@ class RootfsManager(private val context: Context) {
         File(rootfsDir, "home/debian").setReadable(true, false)
 
         _progress.value = SetupProgress(phase = SetupPhase.CONFIGURING, progress = 1f)
+    }
+
+    private fun checkStorageSpace() {
+        val stat = StatFs(filesDir.absolutePath)
+        val availableBytes = stat.availableBytes
+        if (availableBytes < 2L * 1024 * 1024 * 1024) {
+            throw IOException(
+                "Insufficient storage: ${availableBytes / 1_000_000}MB free, ~2GB needed"
+            )
+        }
     }
 
     class TarInputStream(private val input: InputStream) {

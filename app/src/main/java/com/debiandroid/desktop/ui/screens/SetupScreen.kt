@@ -120,7 +120,9 @@ fun SetupScreen(
                 Button(onClick = {
                     isStarted = true
                     scope.launch {
-                        withContext(Dispatchers.IO) { rootfsManager.setup() }
+                        try {
+                            withContext(Dispatchers.IO) { rootfsManager.setup() }
+                        } catch (_: Exception) { }
                     }
                 }, colors = ButtonDefaults.buttonColors(containerColor = StatusError)) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
@@ -133,7 +135,9 @@ fun SetupScreen(
                 Button(onClick = {
                     isStarted = true
                     scope.launch {
-                        withContext(Dispatchers.IO) { rootfsManager.setup() }
+                        try {
+                            withContext(Dispatchers.IO) { rootfsManager.setup() }
+                        } catch (_: Exception) { }
                     }
                 }) {
                     Icon(Icons.Default.CloudDownload, contentDescription = null)
