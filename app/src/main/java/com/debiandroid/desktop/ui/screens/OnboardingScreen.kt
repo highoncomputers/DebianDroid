@@ -56,7 +56,7 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
         // Page indicator dots
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(3) { index ->
