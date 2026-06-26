@@ -23,19 +23,21 @@ class DesktopService : Service() {
         val notification = buildNotification()
         startForeground(NOTIFICATION_ID, notification)
 
+        val resolution = intent?.getStringExtra(EXTRA_RESOLUTION) ?: "1280x720"
+
         when (intent?.action) {
-            ACTION_START -> start()
+            ACTION_START -> start(resolution)
             ACTION_STOP -> stop()
-            ACTION_RESTART -> restart()
+            ACTION_RESTART -> restart(resolution)
         }
 
         return START_STICKY
     }
 
-    private fun start() {
+    private fun start(resolution: String) {
         scope.launch {
             try {
-                prootRunner.startDesktop()
+                prootRunner.startDesktop(resolution)
                 updateNotification("Debian Desktop is running")
             } catch (e: Exception) {
                 updateNotification("Failed to start: ${e.message}")
@@ -55,11 +57,11 @@ class DesktopService : Service() {
         stopSelf()
     }
 
-    private fun restart() {
+    private fun restart(resolution: String) {
         scope.launch {
             prootRunner.stop()
             delay(500)
-            start()
+            start(resolution)
         }
     }
 
@@ -106,5 +108,6 @@ class DesktopService : Service() {
         const val ACTION_START = "com.debiandroid.desktop.action.START"
         const val ACTION_STOP = "com.debiandroid.desktop.action.STOP"
         const val ACTION_RESTART = "com.debiandroid.desktop.action.RESTART"
+        const val EXTRA_RESOLUTION = "resolution"
     }
 }

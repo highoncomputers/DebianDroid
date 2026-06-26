@@ -44,32 +44,6 @@ data class Framebuffer(
         return Framebuffer(newWidth, newHeight, newPixels)
     }
 
-    fun updateFromRaw(x: Int, y: Int, w: Int, h: Int, rawData: ByteArray, bpp: Int) {
-        val data = IntArray(w * h)
-        when (bpp) {
-            4 -> { // RGB888 (32-bit)
-                for (i in 0 until w * h) {
-                    val offset = i * 4
-                    val r = rawData[offset + 2].toInt() and 0xFF
-                    val g = rawData[offset + 1].toInt() and 0xFF
-                    val b = rawData[offset].toInt() and 0xFF
-                    data[i] = (0xFF000000).toInt() or (r shl 16) or (g shl 8) or b
-                }
-            }
-            2 -> { // RGB565 (16-bit)
-                for (i in 0 until w * h) {
-                    val offset = i * 2
-                    val pixel = ((rawData[offset + 1].toInt() and 0xFF) shl 8) or (rawData[offset].toInt() and 0xFF)
-                    val r = (pixel shr 11) and 0x1F
-                    val g = (pixel shr 5) and 0x3F
-                    val b = pixel and 0x1F
-                    data[i] = (0xFF000000).toInt() or (r shl 19) or (g shl 10) or (b shl 3)
-                }
-            }
-        }
-        updateRegion(x, y, w, h, data)
-    }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Framebuffer) return false

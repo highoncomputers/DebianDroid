@@ -54,6 +54,12 @@ jobs:
           mv app/src/main/assets/*.tar.gz app/src/main/assets/rootfs.tar.gz
           echo "Rootfs size: $(du -h app/src/main/assets/rootfs.tar.gz | cut -f1)"
 
+      - name: Run unit tests
+        run: ./gradlew test
+
+      - name: Run lint checks
+        run: ./gradlew lint
+
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore

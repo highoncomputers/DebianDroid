@@ -61,12 +61,12 @@ EOF
         }
     }
 
-    fun startDesktop() {
+    fun startDesktop(resolution: String = "1280x720") {
         val cmd = buildProotCommand(
             "/bin/bash", "-c",
             "export DISPLAY=:1 && export HOME=/home/debian && " +
             "if ! pgrep -x Xvnc > /dev/null; then " +
-            "vncserver :1 -geometry 1280x720 -depth 24 -localhost -SecurityTypes VncAuth; " +
+            "vncserver :1 -geometry $resolution -depth 24 -localhost -SecurityTypes VncAuth; " +
             "fi"
         )
         startProcess(cmd)

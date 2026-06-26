@@ -107,12 +107,14 @@ fun DebianDroidNavHost(
                 }
                 composable("home") {
                     val context = LocalContext.current
+                    val desktopResolution by sessionManager.desktopResolution.collectAsState(initial = "1280x720")
                     HomeScreen(
                         navController = navController,
                         isDesktopRunning = isDesktopRunning,
                         onToggleDesktop = {
                             val intent = Intent(context, DesktopService::class.java)
                             intent.action = if (isDesktopRunning) DesktopService.ACTION_STOP else DesktopService.ACTION_START
+                            intent.putExtra(DesktopService.EXTRA_RESOLUTION, desktopResolution)
                             context.startService(intent)
                             isDesktopRunning = !isDesktopRunning
                         }
@@ -120,10 +122,11 @@ fun DebianDroidNavHost(
                 }
                 composable("desktop") {
                     val vncPassword by sessionManager.vncPassword.collectAsState(initial = "debian")
+                    val desktopResolution by sessionManager.desktopResolution.collectAsState(initial = "1280x720")
                     DesktopScreen(
                         onBack = { navController.popBackStack() },
                         vncPassword = vncPassword,
-                        resolution = "1280x720"
+                        resolution = desktopResolution
                     )
                 }
                 composable("terminal") {
