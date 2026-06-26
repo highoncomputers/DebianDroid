@@ -1,5 +1,9 @@
 package com.debiandroid.desktop.ui.screens
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -14,9 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.debiandroid.desktop.permission.PermissionManager
 import com.debiandroid.desktop.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -25,6 +31,14 @@ import kotlinx.coroutines.launch
 fun OnboardingScreen(onGetStarted: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var permissionRequested by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        permissionRequested = true
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
@@ -42,7 +56,7 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
         // Page indicator dots
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-            horizontalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(3) { index ->
@@ -88,12 +102,30 @@ fun OnboardingScreen(onGetStarted: () -> Unit) {
                     Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             } else {
-                Button(
-                    onClick = onGetStarted
-                ) {
-                    Text("Get Started")
-                    Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (!PermissionManager.areAllGranted(context) && Build.VERSION.SDK_INT >= 33) {
+                        OutlinedButton(
+                            onClick = {
+                                permissionLauncher.launch(
+                                    arrayOf(Manifest.permission.POST_NOTIFICATIONS)
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Notifications, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Allow Notifications")
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    Button(
+                        onClick = onGetStarted,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Get Started")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -114,9 +146,9 @@ private fun OnboardingPage(page: Int, modifier: Modifier) {
             "Access a full Linux terminal, install any Debian packages via apt, and run GUI applications side by side."
         ),
         Triple(
-            Icons.Default.CloudDownload,
+            Icons.Default.Unarchive,
             "One-Time Setup",
-            "Download the Debian rootfs once. After that, everything runs offline with persistent storage across sessions."
+            "Extract the Debian rootfs once. After that, everything runs offline with persistent storage across sessions."
         )
     )
 

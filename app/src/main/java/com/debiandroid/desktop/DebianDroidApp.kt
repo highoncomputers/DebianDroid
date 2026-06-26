@@ -37,7 +37,7 @@ class DebianDroidApp : Application() {
                     "Setup Progress",
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
-                    description = "Shows rootfs download and setup progress"
+                    description = "Shows rootfs extraction and setup progress"
                 }
             )
         }

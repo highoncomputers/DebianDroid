@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.debiandroid.desktop.permission.PermissionManager
 import com.debiandroid.desktop.proot.RootfsManager
 import com.debiandroid.desktop.proot.SetupPhase
 import com.debiandroid.desktop.ui.theme.*
@@ -25,8 +26,8 @@ fun SetupScreen(
     onError: (String) -> Unit
 ) {
     val progress by rootfsManager.progress.collectAsState()
-    var isStarted by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         if (rootfsManager.isSetupComplete) {
@@ -44,6 +45,16 @@ fun SetupScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        if (!rootfsManager.isSetupComplete && PermissionManager.areAllGranted(context)) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { rootfsManager.setup() }
+                } catch (_: Exception) { }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -55,7 +66,6 @@ fun SetupScreen(
         ) {
             Icon(
                 imageVector = when (progress.phase) {
-                    SetupPhase.DOWNLOADING -> Icons.Default.CloudDownload
                     SetupPhase.EXTRACTING -> Icons.Default.Unarchive
                     SetupPhase.CONFIGURING -> Icons.Default.Tune
                     SetupPhase.COMPLETE -> Icons.Default.CheckCircle
@@ -79,7 +89,6 @@ fun SetupScreen(
 
             Text(
                 text = when (progress.phase) {
-                    SetupPhase.DOWNLOADING -> "Downloading Debian Trixie rootfs..."
                     SetupPhase.EXTRACTING -> "Extracting filesystem..."
                     SetupPhase.CONFIGURING -> "Configuring desktop environment..."
                     SetupPhase.COMPLETE -> "Setup complete!"
@@ -100,24 +109,15 @@ fun SetupScreen(
                 )
             }
 
-            LinearProgressIndicator(
-                progress = { progress.progress },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = when (progress.phase) {
-                    SetupPhase.ERROR -> StatusError
-                    SetupPhase.COMPLETE -> StatusRunning
-                    else -> MaterialTheme.colorScheme.primary
-                }
-            )
-
-            if (progress.phase == SetupPhase.DOWNLOADING) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Speed: ${progress.speed}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("ETA: ${progress.eta}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            if (progress.phase == SetupPhase.EXTRACTING) {
+                LinearProgressIndicator(
+                    progress = { progress.progress },
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
-            if (progress.phase == SetupPhase.DOWNLOADING || progress.phase == SetupPhase.EXTRACTING) {
+            if (progress.phase == SetupPhase.EXTRACTING) {
                 Text(
                     "${(progress.progress * 100).toInt()}%",
                     style = MaterialTheme.typography.displaySmall,
@@ -126,9 +126,34 @@ fun SetupScreen(
                 )
             }
 
+            if (!PermissionManager.areAllGranted(context)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Notifications permission required",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "Grant notification permission in Settings to see setup progress.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
             if (progress.phase == SetupPhase.ERROR) {
                 Button(onClick = {
-                    isStarted = true
                     scope.launch {
                         try {
                             withContext(Dispatchers.IO) { rootfsManager.setup() }
@@ -138,21 +163,6 @@ fun SetupScreen(
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Retry")
-                }
-            }
-
-            if (!isStarted && progress.progress == 0f && progress.phase == SetupPhase.DOWNLOADING) {
-                Button(onClick = {
-                    isStarted = true
-                    scope.launch {
-                        try {
-                            withContext(Dispatchers.IO) { rootfsManager.setup() }
-                        } catch (_: Exception) { }
-                    }
-                }) {
-                    Icon(Icons.Default.CloudDownload, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Start Download")
                 }
             }
         }

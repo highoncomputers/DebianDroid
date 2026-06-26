@@ -99,7 +99,7 @@ fun SettingsScreen(
                     ) {
                         Column {
                             Text("Reinstall Debian", style = MaterialTheme.typography.titleSmall)
-                            Text("Remove and re-download rootfs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Remove and re-extract rootfs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Button(
                             onClick = { showResetDialog = true },
@@ -154,7 +154,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
             title = { Text("Reinstall Debian?") },
-            text = { Text("This will delete the current rootfs and re-download everything. Your settings will be preserved.") },
+            text = { Text("This will delete the current rootfs and re-extract it. Your settings will be preserved.") },
             confirmButton = {
                 Button(
                     onClick = { showResetDialog = false; onReinstall() },

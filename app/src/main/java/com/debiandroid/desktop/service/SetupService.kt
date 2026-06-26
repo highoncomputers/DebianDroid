@@ -38,7 +38,6 @@ class SetupService : Service() {
         scope.launch {
             rootfsManager.progress.collect { progress ->
                 val text = when (progress.phase) {
-                    SetupPhase.DOWNLOADING -> "Downloading: ${(progress.progress * 100).toInt()}% at ${progress.speed}"
                     SetupPhase.EXTRACTING -> "Extracting: ${(progress.progress * 100).toInt()}%"
                     SetupPhase.CONFIGURING -> "Configuring..."
                     SetupPhase.COMPLETE -> "Setup complete!"

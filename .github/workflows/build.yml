@@ -38,6 +38,22 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Download latest rootfs tarball
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh release list --repo highoncomputers/DebianDroid \
+            --json tagName --jq '.[] | select(.tagName | startswith("rootfs-")) | .tagName' | sort -V | tail -1)
+          if [ -z "$TAG" ]; then
+            echo "No rootfs release found"
+            exit 1
+          fi
+          mkdir -p app/src/main/assets
+          gh release download "$TAG" --repo highoncomputers/DebianDroid \
+            -p "*.tar.gz" --dir app/src/main/assets/
+          mv app/src/main/assets/*.tar.gz app/src/main/assets/rootfs.tar.gz
+          echo "Rootfs size: $(du -h app/src/main/assets/rootfs.tar.gz | cut -f1)"
+
       - name: Decode keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
@@ -55,12 +71,23 @@ jobs:
           name: app-release.apk
           path: app/build/outputs/apk/release/app-release.apk
 
+      - name: Copy APK to sdcard/apkfiles
+        run: |
+          mkdir -p sdcard/apkfiles
+          cp app/build/outputs/apk/release/app-release.apk sdcard/apkfiles/
+
+      - name: Upload APK (sdcard path)
+        uses: actions/upload-artifact@v4
+        with:
+          name: apkfiles
+          path: sdcard/apkfiles/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: Release v${{ github.run_number }}
-          body: |
+             body: |
             ## DebianDroid v${{ github.run_number }}
 
             Automated release built from commit ${{ github.sha }}.
@@ -76,6 +103,6 @@ jobs:
             1. Download the APK
             2. Enable "Install from unknown sources"
             3. Install and launch
-            4. Follow the one-time setup wizard to download the Debian rootfs
+            4. Follow the one-time setup wizard to extract the Debian rootfs (no network required)
           files: app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true

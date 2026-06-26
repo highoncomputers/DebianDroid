@@ -6,17 +6,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.*
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.zip.GZIPInputStream
 
-enum class SetupPhase { DOWNLOADING, EXTRACTING, CONFIGURING, COMPLETE, ERROR }
+enum class SetupPhase { EXTRACTING, CONFIGURING, COMPLETE, ERROR }
 
 data class SetupProgress(
-    val phase: SetupPhase = SetupPhase.DOWNLOADING,
+    val phase: SetupPhase = SetupPhase.EXTRACTING,
     val progress: Float = 0f,
-    val speed: String = "",
-    val eta: String = "",
     val error: String? = null
 )
 
@@ -28,12 +24,6 @@ class RootfsManager(private val context: Context) {
     val rootfsDir get() = File(filesDir, "rootfs")
     val isSetupComplete get() = File(rootfsDir, "etc/debian_version").exists()
 
-    companion object {
-        const val ROOTFS_TAG = "rootfs-2"
-        val ROOTFS_URL get() = "https://github.com/highoncomputers/DebianDroid/releases/download/$ROOTFS_TAG/debian-trixie-arm64.tar.gz"
-        val CHECKSUM_URL get() = "https://github.com/highoncomputers/DebianDroid/releases/download/$ROOTFS_TAG/debian-trixie-arm64.tar.gz.sha256"
-    }
-
     suspend fun setup() = withContext(Dispatchers.IO) {
         try {
             if (isSetupComplete) {
@@ -41,19 +31,13 @@ class RootfsManager(private val context: Context) {
                 return@withContext
             }
 
-            // Check available storage (need ~2GB free)
             checkStorageSpace()
 
-            // Clean up any partial state from a previous failed attempt
-            val tarFile = File(filesDir, "rootfs.tar.gz")
-            tarFile.delete()
             rootfsDir.deleteRecursively()
             rootfsDir.mkdirs()
 
-            download(tarFile)
-            extract(tarFile)
+            extractFromAssets()
             configure()
-            tarFile.delete()
 
             _progress.value = SetupProgress(phase = SetupPhase.COMPLETE, progress = 1f)
         } catch (e: Exception) {
@@ -64,74 +48,16 @@ class RootfsManager(private val context: Context) {
         }
     }
 
-    private suspend fun download(file: File) {
-        _progress.value = SetupProgress(phase = SetupPhase.DOWNLOADING, progress = 0f)
-        val url = URL(ROOTFS_URL)
-        val conn = url.openConnection() as HttpURLConnection
-        conn.connectTimeout = 30000
-        conn.readTimeout = 30000
-        conn.instanceFollowRedirects = true
-        conn.connect()
-
-        val responseCode = conn.responseCode
-        if (responseCode !in 200..299) {
-            conn.disconnect()
-            throw IOException("Server returned HTTP $responseCode")
-        }
-
-        val totalSize = conn.contentLengthLong
-        val input = BufferedInputStream(conn.inputStream)
-        val output = FileOutputStream(file)
-        val buffer = ByteArray(65536)
-        var downloaded = 0L
-        var lastUpdate = System.currentTimeMillis()
-        var lastBytes = 0L
-
-        try {
-            input.use { inp ->
-                output.use { out ->
-                    while (true) {
-                        val bytes = inp.read(buffer)
-                        if (bytes == -1) break
-                        out.write(buffer, 0, bytes)
-                        downloaded += bytes
-
-                        val now = System.currentTimeMillis()
-                        if (now - lastUpdate > 500) {
-                            val elapsed = (now - lastUpdate) / 1000f
-                            val bytesSince = downloaded - lastBytes
-                            val speed = if (elapsed > 0) (bytesSince / elapsed).toLong() else 0L
-                            val p = if (totalSize > 0) downloaded.toFloat() / totalSize else 0f
-                            val remaining = if (speed > 0) (totalSize - downloaded) / speed else 0L
-
-                            _progress.value = SetupProgress(
-                                phase = SetupPhase.DOWNLOADING,
-                                progress = p,
-                                speed = formatSpeed(speed),
-                                eta = formatTime(remaining)
-                            )
-                            lastUpdate = now
-                            lastBytes = downloaded
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            file.delete()
-            conn.disconnect()
-            throw e
-        }
-        conn.disconnect()
-    }
-
-    private suspend fun extract(file: File) {
+    private suspend fun extractFromAssets() {
         _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = 0f)
-        val totalBytes = file.length()
-        var extractedBytes = 0L
 
-        FileInputStream(file).use { fis ->
-            BufferedInputStream(fis).use { bis ->
-                GZIPInputStream(bis).use { gzis ->
+        val assetFd = context.assets.openFd("rootfs.tar.gz")
+        val totalCompressed = assetFd.length
+        assetFd.close()
+
+        context.assets.open("rootfs.tar.gz").use { assetStream ->
+            CountingInputStream(assetStream).use { countingStream ->
+                GZIPInputStream(countingStream).use { gzis ->
                     val tarInput = TarInputStream(gzis)
                     var entry = tarInput.nextEntry()
                     while (entry != null) {
@@ -145,10 +71,11 @@ class RootfsManager(private val context: Context) {
                             }
                             outputFile.setExecutable(entry.isExecutable, false)
                         }
-                        extractedBytes += entry.size
                         entry = tarInput.nextEntry()
-                        val progress = if (totalBytes > 0) extractedBytes.toFloat() / totalBytes else 0f
-                        _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = progress)
+                        if (totalCompressed > 0) {
+                            val progress = countingStream.bytesRead.toFloat() / totalCompressed
+                            _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = progress)
+                        }
                     }
                 }
             }
@@ -252,19 +179,22 @@ class RootfsManager(private val context: Context) {
         }
     }
 
-    private fun formatSpeed(bytesPerSec: Long): String {
-        return when {
-            bytesPerSec > 1_000_000 -> "${bytesPerSec / 1_000_000} MB/s"
-            bytesPerSec > 1_000 -> "${bytesPerSec / 1_000} KB/s"
-            else -> "$bytesPerSec B/s"
-        }
-    }
+    private class CountingInputStream(private val input: InputStream) : InputStream() {
+        var bytesRead: Long = 0
+            private set
 
-    private fun formatTime(seconds: Long): String {
-        return when {
-            seconds > 3600 -> "${seconds / 3600}h ${(seconds % 3600) / 60}m"
-            seconds > 60 -> "${seconds / 60}m ${seconds % 60}s"
-            else -> "${seconds}s"
+        override fun read(): Int {
+            val b = input.read()
+            if (b != -1) bytesRead++
+            return b
         }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val read = input.read(b, off, len)
+            if (read > 0) bytesRead += read
+            return read
+        }
+
+        override fun close() = input.close()
     }
 }
