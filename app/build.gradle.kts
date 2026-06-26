@@ -52,6 +52,13 @@ android {
     aaptOptions {
         noCompress += listOf("gz")
     }
+}
+
+tasks.configureEach {
+    if (name == "compressReleaseAssets") {
+        enabled = false
+    }
+}
 
     packaging {
         resources {
