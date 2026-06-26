@@ -17,7 +17,9 @@ class SessionManagerTest {
     private lateinit var sessionManager: SessionManager
 
     @Before
-    fun setUp() {
+    fun setUp() = runBlocking {
+        sessionManager = SessionManager(context)
+        sessionManager.resetAll()
         sessionManager = SessionManager(context)
     }
 
