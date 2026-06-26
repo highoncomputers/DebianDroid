@@ -18,8 +18,6 @@ import androidx.navigation.compose.rememberNavController
 import com.debiandroid.desktop.data.SessionManager
 import com.debiandroid.desktop.proot.ProotRunner
 import com.debiandroid.desktop.proot.RootfsManager
-import com.debiandroid.desktop.service.DesktopService
-import com.debiandroid.desktop.service.SetupService
 import com.debiandroid.desktop.ui.screens.*
 import com.debiandroid.desktop.ui.theme.DebianDroidTheme
 import kotlinx.coroutines.*
@@ -61,7 +59,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         prootRunner.cleanup()
         super.onDestroy()
-        }
     }
 }
 
@@ -143,3 +140,4 @@ fun DebianDroidNavHost(
             }
         }
     }
+}
