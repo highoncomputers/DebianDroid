@@ -1,5 +1,8 @@
 package com.debiandroid.desktop.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,8 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.debiandroid.desktop.proot.RootfsManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,11 +29,41 @@ fun SettingsScreen(
     resolution: String = "1280x720",
     onPasswordChange: (String) -> Unit = {},
     onResolutionChange: (String) -> Unit = {},
-    onReinstall: () -> Unit = {}
+    onReinstall: () -> Unit = {},
+    rootfsManager: RootfsManager? = null,
+    onPatchStatus: (String) -> Unit = {}
 ) {
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showPatchDialog by remember { mutableStateOf(false) }
     var passwordInput by remember { mutableStateOf(vncPassword) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val patchFilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null && rootfsManager != null) {
+            showPatchDialog = false
+            scope.launch {
+                try {
+                    val tempFile = File(context.cacheDir, "patch-rootfs.tar.gz")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    onPatchStatus("Patching rootfs...")
+                    withContext(Dispatchers.IO) {
+                        rootfsManager.setupFromFile(tempFile.absolutePath)
+                    }
+                    onPatchStatus("Rootfs updated successfully!")
+                } catch (e: Exception) {
+                    onPatchStatus("Patch failed: ${e.message}")
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -115,6 +154,22 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
+                            Text("Update Rootfs", style = MaterialTheme.typography.titleSmall)
+                            Text("Select a new rootfs.tar.gz to replace the current one", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        OutlinedButton(
+                            onClick = { showPatchDialog = true }
+                        ) {
+                            Text("Patch")
+                        }
+                    }
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
                             Text("About", style = MaterialTheme.typography.titleSmall)
                             Text("DebianDroid v1.0.0", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -146,6 +201,22 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showPasswordDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showPatchDialog) {
+        AlertDialog(
+            onDismissRequest = { showPatchDialog = false },
+            title = { Text("Update Rootfs?") },
+            text = { Text("Select a rootfs.tar.gz file to replace the current Debian rootfs. This will delete the existing rootfs and extract the new one.") },
+            confirmButton = {
+                Button(onClick = {
+                    patchFilePicker.launch(arrayOf("application/gzip", "*/*"))
+                }) { Text("Select File") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPatchDialog = false }) { Text("Cancel") }
             }
         )
     }

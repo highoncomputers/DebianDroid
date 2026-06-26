@@ -144,6 +144,10 @@ fun DebianDroidNavHost(
                                 sessionManager.setSetupComplete(false)
                                 navController.navigate("setup") { popUpTo("home") { inclusive = true } }
                             }
+                        },
+                        rootfsManager = rootfsManager,
+                        onPatchStatus = { msg ->
+                            scope.launch { snackbarHostState.showSnackbar(msg) }
                         }
                     )
                 }

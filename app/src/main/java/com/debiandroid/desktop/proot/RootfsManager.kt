@@ -25,10 +25,24 @@ class RootfsManager(private val context: Context) {
     val isSetupComplete get() = File(rootfsDir, "etc/debian_version").exists()
 
     suspend fun setup() = withContext(Dispatchers.IO) {
+        doSetup { extractFromAssets() }
+    }
+
+    suspend fun setupFromFile(filePath: String) = withContext(Dispatchers.IO) {
+        doSetup {
+            val srcFile = File(filePath)
+            if (!srcFile.exists()) throw FileNotFoundException("Rootfs file not found: $filePath")
+            val localFile = File(filesDir, "custom-rootfs.tar.gz")
+            srcFile.copyTo(localFile, overwrite = true)
+            extractFromFile(localFile)
+        }
+    }
+
+    private suspend fun doSetup(extractAction: suspend () -> Unit) {
         try {
             if (isSetupComplete) {
                 _progress.value = SetupProgress(phase = SetupPhase.COMPLETE, progress = 1f)
-                return@withContext
+                return
             }
 
             checkStorageSpace()
@@ -36,7 +50,7 @@ class RootfsManager(private val context: Context) {
             rootfsDir.deleteRecursively()
             rootfsDir.mkdirs()
 
-            extractFromAssets()
+            extractAction()
             configure()
 
             _progress.value = SetupProgress(phase = SetupPhase.COMPLETE, progress = 1f)
@@ -58,44 +72,57 @@ class RootfsManager(private val context: Context) {
         context.assets.open("rootfs.tar.gz").use { assetStream ->
             CountingInputStream(assetStream).use { countingStream ->
                 GZIPInputStream(countingStream).use { gzis ->
-                    val tarInput = TarInputStream(gzis)
-                    var entry = tarInput.nextEntry()
-                    while (entry != null) {
-                        val outputFile = File(rootfsDir, entry.name)
-                        if (entry.isDirectory) {
-                            outputFile.mkdirs()
-                        } else {
-                            outputFile.parentFile?.mkdirs()
-                            FileOutputStream(outputFile).use { out ->
-                                tarInput.readAll(out)
-                            }
-                            outputFile.setExecutable(entry.isExecutable, false)
-                        }
-                        entry = tarInput.nextEntry()
-                        if (totalCompressed > 0) {
-                            val progress = countingStream.bytesRead.toFloat() / totalCompressed
-                            _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = progress)
-                        }
+                    extractTarEntries(gzis) {
+                        if (totalCompressed > 0) countingStream.bytesRead.toFloat() / totalCompressed else 0f
                     }
                 }
             }
         }
     }
 
+    private suspend fun extractFromFile(file: File) {
+        _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = 0f)
+        val totalBytes = file.length()
+
+        FileInputStream(file).use { fis ->
+            CountingInputStream(fis).use { countingStream ->
+                GZIPInputStream(countingStream).use { gzis ->
+                    extractTarEntries(gzis) {
+                        if (totalBytes > 0) countingStream.bytesRead.toFloat() / totalBytes else 0f
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun extractTarEntries(input: InputStream, progressFn: () -> Float) {
+        val tarInput = TarInputStream(input)
+        var entry = tarInput.nextEntry()
+        while (entry != null) {
+            val outputFile = File(rootfsDir, entry.name)
+            if (entry.isDirectory) {
+                outputFile.mkdirs()
+            } else {
+                outputFile.parentFile?.mkdirs()
+                FileOutputStream(outputFile).use { out ->
+                    tarInput.readAll(out)
+                }
+                outputFile.setExecutable(entry.isExecutable, false)
+            }
+            entry = tarInput.nextEntry()
+            _progress.value = SetupProgress(phase = SetupPhase.EXTRACTING, progress = progressFn())
+        }
+    }
+
     private suspend fun configure() {
         _progress.value = SetupProgress(phase = SetupPhase.CONFIGURING, progress = 0f)
-        // Create shared directory
         File(filesDir, "shared").mkdirs()
-
-        // Create temporary directory
         File(filesDir, "tmp").mkdirs()
 
-        // Ensure resolv.conf
         val resolv = File(rootfsDir, "etc/resolv.conf")
         resolv.parentFile?.mkdirs()
         resolv.writeText("nameserver 8.8.8.8\nnameserver 1.1.1.1\n")
 
-        // Create debian user
         val passwd = File(rootfsDir, "etc/passwd")
         if (passwd.exists() && !passwd.readText().contains("debian:")) {
             passwd.appendText("debian:x:1000:1000:Debian User,,,:/home/debian:/bin/bash\n")
@@ -105,10 +132,7 @@ class RootfsManager(private val context: Context) {
             shadow.appendText("debian:*:19000:0:99999:7:::\n")
         }
 
-        // Create home directory
         File(rootfsDir, "home/debian/.vnc").mkdirs()
-
-        // Set permissions
         File(rootfsDir, "home/debian").setReadable(true, false)
 
         _progress.value = SetupProgress(phase = SetupPhase.CONFIGURING, progress = 1f)
@@ -162,9 +186,7 @@ class RootfsManager(private val context: Context) {
             }
         }
 
-        private fun readBlock(buffer: ByteArray): Int {
-            return input.read(buffer)
-        }
+        private fun readBlock(buffer: ByteArray): Int = input.read(buffer)
 
         private fun skipPadding() {
             val skip = (512 - (remainingBytes % 512)) % 512
