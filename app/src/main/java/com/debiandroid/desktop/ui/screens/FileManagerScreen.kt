@@ -1,5 +1,8 @@
 package com.debiandroid.desktop.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,7 +29,14 @@ fun FileManagerScreen(
     val sharedDir = remember { File(context.filesDir, "shared") }
     var currentPath by remember { mutableStateOf(sharedDirPath.ifEmpty { sharedDir.absolutePath }) }
     var files by remember { mutableStateOf(listOf<File>()) }
-    var showAndroidPicker by remember { mutableStateOf(false) }
+
+    val androidFilesLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            currentPath = uri.path ?: currentPath
+        }
+    }
 
     LaunchedEffect(currentPath) {
         withContext(Dispatchers.IO) {
@@ -51,7 +61,7 @@ fun FileManagerScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showAndroidPicker = true }) {
+                    IconButton(onClick = { androidFilesLauncher.launch(null) }) {
                         Icon(Icons.Default.PhoneAndroid, "Android Files")
                     }
                 }

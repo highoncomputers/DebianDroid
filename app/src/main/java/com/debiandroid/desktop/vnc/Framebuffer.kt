@@ -36,7 +36,12 @@ data class Framebuffer(
     }
 
     fun resize(newWidth: Int, newHeight: Int): Framebuffer {
-        return Framebuffer(newWidth, newHeight, IntArray(newWidth * newHeight))
+        val newPixels = IntArray(newWidth * newHeight)
+        for (row in 0 until minOf(height, newHeight)) {
+            val copyLen = minOf(width, newWidth)
+            pixels.copyInto(newPixels, row * newWidth, row * width, row * width + copyLen)
+        }
+        return Framebuffer(newWidth, newHeight, newPixels)
     }
 
     fun updateFromRaw(x: Int, y: Int, w: Int, h: Int, rawData: ByteArray, bpp: Int) {

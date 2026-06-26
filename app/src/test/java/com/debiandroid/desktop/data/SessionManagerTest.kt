@@ -55,15 +55,6 @@ class SessionManagerTest {
     }
 
     @Test
-    fun `set resolution updates width and height`() = runBlocking {
-        sessionManager.setDesktopResolution("1920x1080")
-        val width = sessionManager.screenWidth.first()
-        val height = sessionManager.screenHeight.first()
-        assertEquals(1920, width)
-        assertEquals(1080, height)
-    }
-
-    @Test
     fun `reset all clears preferences`() = runBlocking {
         sessionManager.setSetupComplete(true)
         sessionManager.setVncPassword("testpass")

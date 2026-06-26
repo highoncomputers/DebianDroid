@@ -20,8 +20,6 @@ val DebianRedLight = Color(0xFFFF6B8A)
 val TerminalBackground = Color(0xFF1E1E1E)
 val TerminalText = Color(0xFFD4D4D4)
 val TerminalGreen = Color(0xFF4EC9B0)
-val TerminalYellow = Color(0xFFDCDCAA)
-val TerminalBlue = Color(0xFF569CD6)
 
 val StatusRunning = Color(0xFF4CAF50)
 val StatusStopped = Color(0xFF9E9E9E)

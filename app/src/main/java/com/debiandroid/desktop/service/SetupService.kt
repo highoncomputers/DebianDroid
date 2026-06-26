@@ -2,6 +2,7 @@ package com.debiandroid.desktop.service
 
 import android.app.*
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.debiandroid.desktop.DebianDroidApp
@@ -25,11 +26,11 @@ class SetupService : Service() {
         scope.launch {
             try {
                 rootfsManager.setup()
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopForegroundSafely()
                 stopSelf()
             } catch (e: Exception) {
                 updateNotification("Setup failed: ${e.message}", -1)
-                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopForegroundSafely()
                 stopSelf()
             }
         }
@@ -72,6 +73,15 @@ class SetupService : Service() {
     private fun updateNotification(text: String, progress: Int) {
         val manager = getSystemService(NotificationManager::class.java)
         manager.notify(NOTIFICATION_ID, buildNotification(text, progress))
+    }
+
+    private fun stopForegroundSafely() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
     }
 
     companion object {

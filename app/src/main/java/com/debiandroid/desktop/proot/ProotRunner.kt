@@ -22,8 +22,6 @@ class ProotRunner(private val context: Context) {
     private val filesDir: File get() = context.filesDir
     private val rootfsDir: File get() = File(filesDir, "rootfs")
     private val prootBin: File get() = File(filesDir, "proot/proot")
-    private val libtalloc: File get() = File(filesDir, "proot/libtalloc.so")
-    private val busybox: File get() = File(filesDir, "busybox/busybox")
 
     fun startVncServer(vncPassword: String, resolution: String = "1280x720") {
         val passFile = File(filesDir, "tmp/.vnc_pass")
